@@ -13,6 +13,7 @@ import Reports from './Finance/Admin/Reports/Reports';
 
 // User Components
 import UserDashboard from './Finance/User/UserDashboard/UserDashboard';
+import UserWalletManagement from './Finance/User/UserWalletManagement/UserWalletManagement';
 import UserPayment from './Finance/User/UserPayment/UserPayment';
 import RequestRefund from './Finance/User/RequestRefund/RequestRefund';
 import UserFines from './Finance/User/UserFines/UserFines';
@@ -32,8 +33,6 @@ const FinancePanel = ({ setCurrentPage }) => {
       switch (activeSection) {
         case 'dashboard':
           return <FinanceDashboard />;
-        case 'wallet':
-          return <Wallet />;
         case 'payment':
           return <Payment />;
         case 'refund':
@@ -49,17 +48,19 @@ const FinancePanel = ({ setCurrentPage }) => {
       // User sections
       switch (activeSection) {
         case 'dashboard':
-          return <UserDashboard />;
+          return <UserDashboard setActiveSection={setActiveSection} />;
+        case 'wallet':
+          return <UserWalletManagement />;
         case 'payment':
           return <UserPayment />;
         case 'refund':
           return <RequestRefund />;
         case 'fines':
           return <UserFines />;
-        case 'transactions':
+        case 'reports':
           return <UserTransactions />;
         default:
-          return <UserDashboard />;
+          return <UserDashboard setActiveSection={setActiveSection} />;
       }
     }
   };

@@ -1,25 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "./AdminOrders.css";
 import AdminOrderPDFGenerator from "./AdminOrderPDFGenerator";
 
-function AdminOrders() {
+function AdminOrders({ setActiveTab, setCurrentView }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const res = await fetch("/api/orders");
+        const res = await fetch("http://localhost:5001/api/orders");
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to fetch orders");
         setOrders(data.data || []);
       } catch (err) {
+        console.error("Error fetching orders:", err);
         setError("Could not load orders.");
       } finally {
         setLoading(false);
@@ -86,7 +85,16 @@ function AdminOrders() {
                   <td>Rs. {o.totalPrice}</td>
                   <td>{new Date(o.createdAt).toLocaleString()}</td>
                   <td>
-                    <button className="view-btn" onClick={() => navigate(`/orders/${o._id}`)}>View</button>
+                    <button 
+                      className="view-btn" 
+                      onClick={() => {
+                        // Store order data for the detail view
+                        sessionStorage.setItem('selectedOrderForAdmin', JSON.stringify(o));
+                        setCurrentView('order-detail');
+                      }}
+                    >
+                      View
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -168,9 +168,94 @@ const loginUser = async (req, res, next) => {
     return res.status(200).json({ message: "Login successful", user });
 };
 
+// Change password (for users)
+const changePassword = async (req, res, next) => {
+    const id = req.params.id;
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Verify current password
+        if (user.password !== currentPassword) {
+            return res.status(400).json({ message: "Current password is incorrect" });
+        }
+
+        // Update password
+        user.password = newPassword;
+        await user.save();
+
+        return res.status(200).json({ message: "Password changed successfully" });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Unable to change password" });
+    }
+};
+
+// Reset password (for admin)
+const resetPassword = async (req, res, next) => {
+    const id = req.params.id;
+    const { newPassword } = req.body;
+
+    try {
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Update password directly (admin action)
+        user.password = newPassword;
+        await user.save();
+
+        // Send email notification to user
+        const mailOptions = {
+            from: EMAIL_USER,
+            to: user.email,
+            subject: 'Password Reset - Helpdesk Management System',
+            text: `Hello ${user.full_name},\n\nYour password has been reset by an administrator.\n\nPlease log in with your new password and consider changing it for security.\n\n- Helpdesk Team`,
+            html: `
+              <div style="font-family: Arial, sans-serif; background: #f6f8fa; padding: 32px;">
+                <div style="max-width: 520px; margin: auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 32px;">
+                  <h2 style="color: #e74c3c; margin-bottom: 16px;">Password Reset Notification</h2>
+                  <p style="font-size: 1.1rem; color: #222;">Hello <b>${user.full_name}</b>,</p>
+                  <p style="font-size: 1.05rem; color: #333; margin-bottom: 18px;">
+                    Your password has been reset by an administrator.
+                  </p>
+                  <div style="background: #fef5e7; border-radius: 6px; padding: 16px; margin-bottom: 18px;">
+                    <p style="margin:0; color:#d68910; font-weight:600;">Please log in with your new password and consider changing it for security.</p>
+                  </div>
+                  <p style="font-size: 1rem; color: #555;">If you did not request this change, please contact the administrator immediately.<br>- Helpdesk Team</p>
+                  <div style="margin-top: 32px; text-align: center; color: #aaa; font-size: 0.95rem;">
+                    &copy; ${new Date().getFullYear()} Helpdesk Management System
+                  </div>
+                </div>
+              </div>
+            `
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.log('Error sending password reset email:', error);
+            } else {
+                console.log('Password reset email sent:', info.response);
+            }
+        });
+
+        return res.status(200).json({ message: "Password reset successfully" });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Unable to reset password" });
+    }
+};
+
 exports.getAllUsers = getAllUsers;
 exports.addUser = addUser;
 exports.getById = getById;
 exports.updateUser = updateUser;
 exports.deleteUser = deleteUser;
 exports.loginUser = loginUser;
+exports.changePassword = changePassword;
+exports.resetPassword = resetPassword;

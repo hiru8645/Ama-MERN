@@ -32,8 +32,18 @@ const getAllWallets = async (req, res) => {
 const getWalletByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
-    const wallet = await Wallet.findOne({ userId: userId.trim(), type: "user" });
-    if (!wallet) return res.status(404).json({ message: "Wallet not found" });
+    let wallet = await Wallet.findOne({ userId: userId.trim(), type: "user" });
+    
+    // If wallet doesn't exist, create one
+    if (!wallet) {
+      wallet = new Wallet({
+        userId: userId.trim(),
+        type: "user",
+        balance: 0
+      });
+      await wallet.save();
+    }
+    
     res.status(200).json({ wallet });
   } catch (err) {
     res.status(500).json({ message: "Error fetching wallet", error: err.message });

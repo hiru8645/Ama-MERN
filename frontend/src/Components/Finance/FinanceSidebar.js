@@ -4,19 +4,19 @@ import "./FinanceSidebar.css";
 function FinanceSidebar({ activeSection, setActiveSection, isAdmin }) {
   const adminSections = [
     { key: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { key: 'wallet', label: 'Wallet Management', icon: '💰' },
     { key: 'payment', label: 'Payment', icon: '💳' },
     { key: 'refund', label: 'Refund Request', icon: '↩️' },
     { key: 'fines', label: 'Fines', icon: '⚠️' },
-    { key: 'reports', label: 'Reports', icon: '📈' }
+    { key: 'reports', label: 'Transactions', icon: '📈' }
   ];
 
   const userSections = [
     { key: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { key: 'wallet', label: 'Wallet Management', icon: '�' },
     { key: 'payment', label: 'Payment', icon: '💳' },
-    { key: 'refund', label: 'Request Refund', icon: '↩️' },
-    { key: 'fines', label: 'My Fines', icon: '⚠️' },
-    { key: 'transactions', label: 'Transactions', icon: '📋' }
+    { key: 'refund', label: 'Refund Request', icon: '↩️' },
+    { key: 'fines', label: 'Fines', icon: '⚠️' },
+    { key: 'reports', label: 'Reports', icon: '📈' }
   ];
 
   const sections = isAdmin ? adminSections : userSections;

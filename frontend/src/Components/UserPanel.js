@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { FaSignOutAlt, FaUserShield, FaUserCog } from 'react-icons/fa';
+import { FaSignOutAlt, FaUserShield, FaUserCog, FaHome, FaUsers } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
+import { isAdmin } from '../utils/roleUtils';
 import Header from './Header';
 import Footer from './Common/Footer';
-import UserManagement from './UserManagement';
 import Login from './User/Login';
 import Register from './User/Register';
+
+// Import user components
+import UserProfile from './User/UserProfile';
 import AdminUsers from './User/Admin/AdminUsers';
 import AdminUserDetail from './User/Admin/AdminUserDetail';
+import AdminUserEdit from './User/AdminUserEdit';
+import UserDashboard from './User/UserDashboard/UserDashboard';
+
 import '../Components/PanelLayout.css';
 import './UserPanel.css';
 
 const UserPanel = ({ setCurrentPage }) => {
-  const [activeTab, setActiveTab] = useState('admin-users');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [currentView, setCurrentView] = useState('dashboard');
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
   const [selectedUserId, setSelectedUserId] = useState(null);
   const { user, isLoggedIn, logout } = useAuth();
+  const userIsAdmin = isAdmin(user);
 
   // Check for initial auth mode from sessionStorage
   useEffect(() => {
@@ -54,7 +62,8 @@ const UserPanel = ({ setCurrentPage }) => {
 
   const handleLogout = () => {
     logout();
-    setActiveTab('admin-users'); // Set to manage users
+    setActiveTab('dashboard');
+    setCurrentView('dashboard');
   };
 
   const renderMainContent = () => {
@@ -77,62 +86,69 @@ const UserPanel = ({ setCurrentPage }) => {
       }
     }
 
-    // If user is logged in, show user management content
+    // Admin Section - Dashboard and Users Management
+    if (userIsAdmin) {
+      switch (activeTab) {
+        case 'dashboard':
+          return <UserDashboard 
+            setActiveTab={setActiveTab} 
+            setCurrentView={setCurrentView}
+            isAdmin={true}
+          />;
+        case 'users':
+          // Handle different views within users section
+          if (currentView === 'user-detail') {
+            return <AdminUserDetail 
+              userId={selectedUserId} 
+              setActiveTab={setActiveTab}
+              setCurrentView={setCurrentView}
+              onBack={() => setCurrentView('users-table')}
+            />;
+          } else if (currentView === 'user-edit') {
+            return <AdminUserEdit 
+              userId={selectedUserId}
+              setActiveTab={setActiveTab}
+              setCurrentView={setCurrentView}
+              onBack={() => setCurrentView('users-table')}
+            />;
+          }
+          return <AdminUsers 
+            setActiveTab={setActiveTab}
+            setCurrentView={setCurrentView}
+            onNavigate={(view, userId) => {
+              setSelectedUserId(userId);
+              setCurrentView(view);
+            }}
+          />;
+        default:
+          return <UserDashboard 
+            setActiveTab={setActiveTab} 
+            setCurrentView={setCurrentView}
+            isAdmin={true}
+          />;
+      }
+    }
+
+    // Regular User Section - Dashboard and Profile only
     switch (activeTab) {
-      case 'users':
-        return <UserManagement />;
-      case 'admin-users':
-        return <AdminUsers onNavigate={(view, userId) => {
-          if (view === 'user-detail') {
-            setSelectedUserId(userId);
-            setActiveTab('user-detail');
-          } else if (view === 'user-edit') {
-            setSelectedUserId(userId);
-            setActiveTab('user-edit');
-          } else if (view === 'user-add') {
-            setActiveTab('user-add');
-          }
-        }} />;
-      case 'user-detail':
-        return <AdminUserDetail userId={selectedUserId} onBack={() => setActiveTab('admin-users')} />;
-      case 'user-edit':
-        return (
-          <div className="user-edit-content">
-            <h2>✏️ Edit User</h2>
-            <p>User editing functionality will be implemented here.</p>
-            <button 
-              onClick={() => setActiveTab('admin-users')}
-              style={{ padding: '10px 15px', marginTop: '15px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-            >
-              ← Back to Users
-            </button>
-          </div>
-        );
-      case 'user-add':
-        return (
-          <div className="user-add-content">
-            <h2>➕ Add New User</h2>
-            <p>User creation functionality will be implemented here.</p>
-            <button 
-              onClick={() => setActiveTab('admin-users')}
-              style={{ padding: '10px 15px', marginTop: '15px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-            >
-              ← Back to Users
-            </button>
-          </div>
-        );
+      case 'dashboard':
+        return <UserDashboard 
+          setActiveTab={setActiveTab} 
+          setCurrentView={setCurrentView}
+          isAdmin={false}
+        />;
+      case 'profile':
+        return <UserProfile 
+          setActiveTab={setActiveTab}
+          setCurrentView={setCurrentView}
+          currentUser={user}
+        />;
       default:
-        return <AdminUsers onNavigate={(view, userId) => {
-          if (view === 'user-detail') {
-            setSelectedUserId(userId);
-            setActiveTab('user-detail');
-          } else if (view === 'user-edit') {
-            setSelectedUserId(userId);
-            setActiveTab('user-edit');
-          } else if (view === 'user-add') {
-            setActiveTab('user-add');
-          }
-        }} />; // Default to manage users for admin/staff
+        return <UserDashboard 
+          setActiveTab={setActiveTab} 
+          setCurrentView={setCurrentView}
+          isAdmin={false}
+        />;
     }
   };
 
@@ -144,56 +160,80 @@ const UserPanel = ({ setCurrentPage }) => {
         {isLoggedIn && (
           <div className="panel-sidebar">
             <div className="sidebar-header">
-              <h3>👥 Users</h3>
-              <p>Management System</p>
+              <h3>👥 User Management</h3>
+              <p>{userIsAdmin ? '🔧 Admin Dashboard' : '👤 User Dashboard'}</p>
               {isLoggedIn && (
                 <div className="user-info">
+                  <span className="user-role">
+                    {userIsAdmin ? '👑 Admin' : '👤 User'}
+                    {userIsAdmin && <FaUserShield style={{ marginLeft: '8px', color: '#f39c12' }} />}
+                  </span>
                   <p>Welcome, {user?.full_name}</p>
-                <small>{user?.role}</small>
-              </div>
-            )}
-          </div>
-          <nav className="sidebar-nav">
-            <button 
-              className="nav-item back-to-home"
-              onClick={() => window.location.href = '/'}
-            >
-              🏠 Back to Home
-            </button>
-
-            {/* User management options when logged in - Role-based sections */}
-            
-            {/* Admin/Staff Only Sections */}
-            {(user?.role === 'admin' || user?.role === 'staff') && (
-              <>
-                <button 
-                  className={`nav-item ${activeTab === 'admin-users' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('admin-users')}
-                >
-                  <FaUserShield /> Manage Users
-                </button>
-              </>
-            )}
-            
-            {/* User Profile Management for Regular Users */}
-            {user?.role !== 'admin' && user?.role !== 'staff' && (
+                  <small>{user?.role || 'user'}</small>
+                </div>
+              )}
+            </div>
+            <nav className="sidebar-nav">
               <button 
-                className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
-                onClick={() => setActiveTab('users')}
+                className="nav-item back-to-home"
+                onClick={() => setCurrentPage('home')}
               >
-                <FaUserCog /> My Profile
+                🏠 Back to Home
               </button>
-            )}
-            
-            {/* Logout */}
-            <button 
-              className="nav-item logout-btn"
-              onClick={handleLogout}
-            >
-              <FaSignOutAlt /> Logout
-            </button>
-          </nav>
-        </div>
+
+              {isLoggedIn && (
+                <>
+                  {/* Admin Section - Dashboard and Users */}
+                  {userIsAdmin ? (
+                    <>
+                      <div className="nav-section-header">
+                        <h4>🔧 Admin User Management</h4>
+                      </div>
+                      <button 
+                        className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('dashboard'); setCurrentView('dashboard'); }}
+                      >
+                        <FaHome /> Dashboard
+                      </button>
+                      <button 
+                        className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('users'); setCurrentView('users-table'); }}
+                      >
+                        <FaUsers /> Users
+                      </button>
+                    </>
+                  ) : (
+                    /* Regular User Section - Dashboard and Profile */
+                    <>
+                      <div className="nav-section-header">
+                        <h4>👤 User Profile</h4>
+                      </div>
+                      <button 
+                        className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('dashboard'); setCurrentView('dashboard'); }}
+                      >
+                        <FaHome /> Dashboard
+                      </button>
+                      <button 
+                        className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('profile'); setCurrentView('profile'); }}
+                      >
+                        <FaUserCog /> Profile
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+              
+              {/* Logout */}
+              <button 
+                className="nav-item logout-btn"
+                onClick={handleLogout}
+              >
+                <FaSignOutAlt /> Logout
+              </button>
+            </nav>
+          </div>
         )}
 
         {/* Main Content */}

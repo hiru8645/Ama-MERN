@@ -31,9 +31,6 @@ const createPayment = async (req, res) => {
 const getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find().sort({ date: -1 });
-    if (!payments.length) {
-      return res.status(404).json({ message: "No payments found" });
-    }
     return res.status(200).json({ payments });
   } catch (err) {
     return res.status(500).json({ error: err.message });

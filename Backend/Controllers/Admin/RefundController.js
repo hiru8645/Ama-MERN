@@ -31,7 +31,6 @@ const createRefundRequest = async (req, res) => {
 const getAllRefunds = async (req, res) => {
   try {
     const refunds = await Refund.find().sort({ requestDate: -1 });
-    if (!refunds.length) return res.status(404).json({ message: "No refund requests found" });
     res.status(200).json({ refunds });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -113,10 +112,22 @@ const deleteRefund = async (req, res) => {
   }
 };
 
+// Get refunds by user ID
+const getRefundsByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const refunds = await Refund.find({ buyerId: userId }).sort({ requestDate: -1 });
+    res.status(200).json({ refunds });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createRefundRequest,
   getAllRefunds,
   approveRefund,
   rejectRefund,
-  deleteRefund
+  deleteRefund,
+  getRefundsByUser
 };

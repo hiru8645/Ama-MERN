@@ -1,35 +1,31 @@
 import React, { useState } from 'react';
-import { FaTicketAlt, FaChartBar, FaUsers, FaClipboardList, FaShoppingCart, FaShieldAlt } from 'react-icons/fa';
+import { FaClipboardList, FaShieldAlt, FaHome, FaBook } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdmin, hasPermission } from '../utils/roleUtils';
+import { isAdmin } from '../utils/roleUtils';
 import Header from './Header';
-import AdminTicketList from './HelpDesk/admin/AdminTicketList';
-import AdminOrders from './Order/Admin/AdminOrders';
+
+// Import Project Harindie components
+import UserOrdersDashboard from './Order/User/UserOrdersDashboard';
 import BookList from './Order/User/BookList';
 import MyOrders from './Order/User/MyOrders';
-import AdminUsers from './User/Admin/AdminUsers';
-import AdminStats from './HelpDesk/admin/AdminStats';
+import AddOrder from './Order/User/AddOrder';
+import OrderDetail from './Order/User/OrderDetail';
+
+// Import admin components
+import AdminOrdersDashboard from './Order/Admin/AdminOrdersDashboard';
+import AdminOrders from './Order/Admin/AdminOrders';
+import AdminOrderDetail from './Order/Admin/AdminOrderDetail';
+
 import '../Components/PanelLayout.css';
 import './UserPanel.css';
 
 const OrderPanel = ({ setCurrentPage }) => {
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [currentView, setCurrentView] = useState('dashboard'); // For detailed navigation
   const { user, isLoggedIn } = useAuth();
   const userIsAdmin = isAdmin(user);
 
-  // Permission check component
-  const PermissionGuard = ({ permission, children, fallback = null }) => {
-    if (!hasPermission(user, permission)) {
-      return fallback || (
-        <div className="access-denied">
-          <h3>🚫 Access Denied</h3>
-          <p>You don't have permission to view this section.</p>
-          <small>Required permission: {permission}</small>
-        </div>
-      );
-    }
-    return children;
-  };
+
 
   const renderMainContent = () => {
     // If user is not logged in, show login prompt
@@ -48,54 +44,40 @@ const OrderPanel = ({ setCurrentPage }) => {
       );
     }
 
-    // Admin Section - Order Management
+    // Admin Section - Only 2 sections: Dashboard and Orders
     if (userIsAdmin) {
       switch (activeTab) {
+        case 'dashboard':
+          return <AdminOrdersDashboard setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
         case 'orders':
-          return <AdminOrders />;
-        case 'users':
-          return (
-            <PermissionGuard permission="manage_users">
-              <AdminUsers />
-            </PermissionGuard>
-          );
-        case 'tickets':
-          return <AdminTicketList />;
-        case 'stats':
-          return (
-            <PermissionGuard permission="view_analytics">
-              <AdminStats />
-            </PermissionGuard>
-          );
+          // Handle different views within orders section
+          if (currentView === 'order-detail') {
+            return <AdminOrderDetail setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
+          }
+          return <AdminOrders setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
         default:
-          return <AdminOrders />;
+          return <AdminOrdersDashboard setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
       }
     }
 
-    // User Section - Shopping & Orders
+    // User Section - Simple 3-section structure
     switch (activeTab) {
-      case 'orders':
-        return (
-          <div>
-            <div style={{ marginBottom: '2rem' }}>
-              <BookList />
-            </div>
-            <MyOrders />
-          </div>
-        );
-      case 'my-orders':
-        return <MyOrders />;
+      case 'dashboard':
+        return <UserOrdersDashboard setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
       case 'books':
-        return <BookList />;
+        // Handle different views within books section
+        if (currentView === 'add-order') {
+          return <AddOrder setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
+        }
+        return <BookList setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
+      case 'my-orders':
+        // Handle different views within my-orders section  
+        if (currentView === 'order-detail') {
+          return <OrderDetail setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
+        }
+        return <MyOrders setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
       default:
-        return (
-          <div>
-            <div style={{ marginBottom: '2rem' }}>
-              <BookList />
-            </div>
-            <MyOrders />
-          </div>
-        );
+        return <UserOrdersDashboard setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
     }
   };
 
@@ -129,58 +111,46 @@ const OrderPanel = ({ setCurrentPage }) => {
 
             {isLoggedIn && (
               <>
-                {/* Admin Section */}
+                {/* Admin Section - Only Dashboard and Orders */}
                 {userIsAdmin ? (
                   <>
                     <div className="nav-section-header">
-                      <h4>🔧 Admin Tools</h4>
+                      <h4>🔧 Admin Order Management</h4>
                     </div>
                     <button 
+                      className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                      onClick={() => { setActiveTab('dashboard'); setCurrentView('dashboard'); }}
+                    >
+                      <FaHome /> Dashboard
+                    </button>
+                    <button 
                       className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('orders')}
+                      onClick={() => { setActiveTab('orders'); setCurrentView('orders-table'); }}
                     >
-                      <FaClipboardList /> Order Management
-                    </button>
-                    <button 
-                      className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('users')}
-                    >
-                      <FaUsers /> User Management
-                    </button>
-                    <button 
-                      className={`nav-item ${activeTab === 'tickets' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('tickets')}
-                    >
-                      <FaTicketAlt /> Support Tickets
-                    </button>
-                    <button 
-                      className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('stats')}
-                    >
-                      <FaChartBar /> Analytics
+                      <FaClipboardList /> Orders
                     </button>
                   </>
                 ) : (
-                  /* User Section - Only Order-related features */
+                  /* User Section - Only 3 sections: Dashboard, Books, My Orders */
                   <>
                     <div className="nav-section-header">
-                      <h4>🛒 Shopping</h4>
+                      <h4>🛒 Order Management</h4>
                     </div>
                     <button 
-                      className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('orders')}
+                      className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                      onClick={() => { setActiveTab('dashboard'); setCurrentView('dashboard'); }}
                     >
-                      <FaShoppingCart /> Shop & Orders
+                      <FaHome /> Dashboard
                     </button>
                     <button 
                       className={`nav-item ${activeTab === 'books' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('books')}
+                      onClick={() => { setActiveTab('books'); setCurrentView('books'); }}
                     >
-                      <FaClipboardList /> Browse Books
+                      <FaBook /> Books
                     </button>
                     <button 
                       className={`nav-item ${activeTab === 'my-orders' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('my-orders')}
+                      onClick={() => { setActiveTab('my-orders'); setCurrentView('my-orders'); }}
                     >
                       <FaClipboardList /> My Orders
                     </button>

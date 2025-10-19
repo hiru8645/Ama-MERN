@@ -1,117 +1,271 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import "./OrderDetail.css";
 
-function OrderDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+function OrderDetail({ setActiveTab, setCurrentView }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrder = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/orders/${id}`);
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed");
-      setOrder(data.data);
-    } catch (_) {
-      setOrder(null);
-    } finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchOrder(); // eslint-disable-next-line
-  }, [id]);
-
-  const cancel = async () => {
-    if (!window.confirm("Cancel this order?")) return;
-    try {
-      const res = await fetch(`/api/orders/${id}/cancel`, { method: "PATCH" });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed");
-      await fetchOrder();
-    } catch (e) { alert(e.message || "Failed to cancel"); }
-  };
-
-  const del = async () => {
-    if (!window.confirm("Delete this order?")) return;
-    try {
-      // If pending, cancel first so backend allows deletion
-      if (order.status === 'Pending') {
-        await fetch(`/api/orders/${id}/cancel`, { method: "PATCH" });
+  useEffect(() => {
+    // Load order from sessionStorage
+    const selectedOrder = sessionStorage.getItem('selectedOrder');
+    if (selectedOrder) {
+      try {
+        const orderData = JSON.parse(selectedOrder);
+        setOrder(orderData);
+      } catch (e) {
+        console.error('Error parsing order data:', e);
       }
-      const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+    }
+    setLoading(false);
+  }, []);
+
+  const goBack = () => {
+    sessionStorage.removeItem('selectedOrder');
+    if (setActiveTab && setCurrentView) {
+      setActiveTab('my-orders');
+      setCurrentView('my-orders');
+    }
+  };
+
+  const deleteOrder = async () => {
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
+    
+    try {
+      const res = await fetch(`http://localhost:5001/api/orders/${order._id}`, { 
+        method: "DELETE" 
+      });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || "Failed");
-      navigate("/user/orders");
-    } catch (e) { alert(e.message || "Failed to delete"); }
+      
+      alert("Order deleted successfully");
+      goBack();
+    } catch (e) { 
+      alert(e.message || "Failed to delete order"); 
+    }
   };
 
   const editOrder = () => {
     if (!order || !order.items || order.items.length === 0) return;
-    const first = order.items[0];
-    const book = { itemName: first.itemName, bookId: first.bookId, _id: first.bookId, price: first.price };
-    navigate("/user/add-order", {
-      state: {
-        book,
-        editing: true,
-        existingOrderId: order._id,
-        preset: {
-          customerName: order.customerName || order.username,
-          customerContact: order.customerContact || "",
-          quantity: first.quantity
-        }
-      }
-    });
+    
+    if (order.status !== 'Pending') {
+      alert('Only pending orders can be edited.');
+      return;
+    }
+    
+    const firstItem = order.items[0];
+    const book = {
+      _id: firstItem.bookId,
+      itemName: firstItem.itemName,
+      price: firstItem.price,
+      bookId: firstItem.bookId,
+      quantity: 100 // We don't know actual stock, set high number
+    };
+    
+    // Store book and editing data
+    sessionStorage.setItem('selectedBook', JSON.stringify(book));
+    sessionStorage.setItem('editingOrder', JSON.stringify({
+      orderId: order._id,
+      customerName: order.customerName,
+      customerContact: order.customerContact,
+      quantity: firstItem.quantity
+    }));
+    
+    if (setCurrentView) {
+      setCurrentView('add-order');
+    }
   };
 
-  const toPay = () => {
-    // Mark paid first, then navigate to existing payment UI
-    fetch(`/api/orders/${id}/paid`, { method: "PATCH" })
-      .finally(() => {
-        navigate("/payment", { state: { orderId: order._id, amount: order.totalPrice } });
-      });
+  const clickToPay = () => {
+    alert(`Redirecting to payment for Order ${order.orderId || order._id}\nAmount: Rs. ${order.totalPrice}`);
+    // In a real system, integrate with payment gateway
   };
 
-  if (loading) return <div className="orderdetail-page"><div className="orderdetail-container"><p>Loading...</p></div></div>;
-  if (!order) return <div className="orderdetail-page"><div className="orderdetail-container"><p>Order not found.</p></div></div>;
+  if (loading) {
+    return (
+      <div className="orderdetail-page">
+        <div className="orderdetail-container">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const canEditOrDelete = ['Completed','Cancelled','Rejected'].includes(order.status);
+  if (!order) {
+    return (
+      <div className="orderdetail-page">
+        <div className="orderdetail-container">
+          <p>Order not found.</p>
+          <button className="back-btn" onClick={goBack}>
+            ← Back to Orders
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="orderdetail-page">
       <div className="orderdetail-container">
-        <button className="view-btn" onClick={() => navigate("/user/orders")}>← Back</button>
-        <div className="order-card">
-          <div className="order-card-header">
-            <div><span className={`status-badge ${order.status.toLowerCase()}`}>{order.status}</span></div>
-            <div>Order ID: {order.orderId || order._id}</div>
-          </div>
-          <div className="order-card-body">
-            <div><strong>User:</strong> {order.username}</div>
-            <div><strong>Items:</strong>
-              <ul>
-                {order.items.map((it, idx) => (
-                  <li key={idx}><span className="order-book-id">{it.bookId}</span> - {it.itemName} × {it.quantity} <span className="order-item-price">Rs. {it.price}</span></li>
-                ))}
-              </ul>
+        <button 
+          className="back-btn" 
+          onClick={goBack}
+          style={{ 
+            background: 'linear-gradient(135deg, #2c3e50 0%, #3498db 100%)',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            marginBottom: '20px'
+          }}
+        >
+          ← Back to My Orders
+        </button>
+        
+        <div className="order-detail-card">
+          <div className="order-detail-header">
+            <div className="order-title">
+              <h2>📋 Order Details</h2>
+              <div className="order-id-display">Order #{order.orderId || order._id}</div>
             </div>
-            <div><strong>Total Items:</strong> {order.totalItems}</div>
-            <div><strong>Total Price:</strong> Rs. {order.totalPrice}</div>
-            <div><strong>Placed On:</strong> {new Date(order.createdAt).toLocaleString()}</div>
+            <div className="order-status-display">
+              <span className={`status-badge large ${order.status.toLowerCase()}`}>
+                {order.status}
+              </span>
+            </div>
           </div>
-          <div className="actions-row">
+          
+          <div className="order-detail-content">
+            <div className="detail-section">
+              <h3>👤 Customer Information</h3>
+              <div className="detail-grid">
+                <div className="detail-item">
+                  <span className="label">Name:</span>
+                  <span className="value">{order.customerName || order.username}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Contact:</span>
+                  <span className="value">{order.customerContact || 'Not provided'}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">User ID:</span>
+                  <span className="value">{order.username}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="detail-section">
+              <h3>📚 Order Items</h3>
+              <div className="items-detail">
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="item-detail-card">
+                    <div className="item-info">
+                      <div className="item-name">{item.itemName}</div>
+                      <div className="item-code">Code: {item.bookId}</div>
+                    </div>
+                    <div className="item-pricing">
+                      <div>Quantity: {item.quantity}</div>
+                      <div>Price: Rs. {item.price}</div>
+                      <div className="item-total">Total: Rs. {(item.quantity * item.price).toFixed(2)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="detail-section">
+              <h3>💰 Order Summary</h3>
+              <div className="summary-detail">
+                <div className="summary-row">
+                  <span>Total Items:</span>
+                  <span>{order.totalItems}</span>
+                </div>
+                <div className="summary-row total">
+                  <span><strong>Total Amount:</strong></span>
+                  <span><strong>Rs. {order.totalPrice}</strong></span>
+                </div>
+                <div className="summary-row">
+                  <span>Order Date:</span>
+                  <span>{new Date(order.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="order-actions-detail">
             {order.status === 'Pending' && (
               <>
-                <button className="view-btn" onClick={editOrder}>Edit Order</button>
-                <button className="view-btn danger" onClick={del}>Delete Order</button>
+                <button 
+                  className="edit-btn-detail"
+                  onClick={editOrder}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #2c3e50 0%, #3498db 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Edit Order
+                </button>
+                <button 
+                  className="delete-btn-detail"
+                  onClick={deleteOrder}
+                  style={{ 
+                    background: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Delete Order
+                </button>
               </>
             )}
-            {['Completed','Cancelled','Rejected'].includes(order.status) && (
-              <button className="view-btn muted" onClick={del}>Delete Order</button>
-            )}
+            
             {order.status === 'Approved' && (
-              <button className="view-btn primary" onClick={toPay}>Click to Pay</button>
+              <button 
+                className="pay-btn-detail"
+                onClick={clickToPay}
+                style={{ 
+                  background: 'linear-gradient(135deg, #2c3e50 0%, #3498db 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Click to Pay
+              </button>
+            )}
+            
+            {['Completed', 'Cancelled', 'Rejected'].includes(order.status) && (
+              <button 
+                className="delete-btn-detail muted"
+                onClick={deleteOrder}
+                style={{ 
+                  background: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Delete Order
+              </button>
             )}
           </div>
         </div>
