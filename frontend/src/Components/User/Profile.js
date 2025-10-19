@@ -72,7 +72,7 @@ const Profile = () => {
     setMsg('');
     setErr('');
     try {
-      const res = await fetch(`http://localhost:5001/users/${user._id}`, {
+      const res = await fetch(`http://localhost:5001/api/users/${user._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -96,7 +96,7 @@ const Profile = () => {
     setMsg('');
     setErr('');
     try {
-      const res = await fetch(`http://localhost:5001/users/${user._id}`, {
+      const res = await fetch(`http://localhost:5001/api/users/${user._id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -132,7 +132,7 @@ const Profile = () => {
     
     try {
       // Fetch user to check current password
-      const res = await fetch(`http://localhost:5001/users/${user._id}`);
+      const res = await fetch(`http://localhost:5001/api/users/${user._id}`);
       const data = await res.json();
       if (!res.ok || !data.user) {
         setPwErr('User not found.');
@@ -143,7 +143,7 @@ const Profile = () => {
         return;
       }
       // Update password
-      const updateRes = await fetch(`http://localhost:5001/users/${user._id}`, {
+      const updateRes = await fetch(`http://localhost:5001/api/users/${user._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, password: passwords.new })

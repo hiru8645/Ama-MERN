@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Otherwise, proceed with normal login
-      const res = await fetch('http://localhost:5001/users/login', {
+      const res = await fetch('http://localhost:5001/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials)
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const res = await fetch('http://localhost:5001/users', {
+      const res = await fetch('http://localhost:5001/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)

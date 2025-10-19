@@ -1,10 +1,23 @@
 import React from 'react';
 import './Header.css';
 import { useAuth } from '../contexts/AuthContext';
+import { isInventoryManager, hasPermission } from '../utils/roleUtils';
 
 const Header = ({ setCurrentPage }) => {
   const { user, isLoggedIn, logout } = useAuth();
   const handlePanelClick = (panelName, authMode = null) => {
+    // Special handling for inventory access - only inventory managers allowed
+    if (panelName === 'inventory') {
+      if (!isLoggedIn) {
+        alert('Please log in first to access Inventory Management.');
+        return;
+      }
+      if (!isInventoryManager(user) && !hasPermission(user, 'access_inventory')) {
+        alert('Access Denied: Only Inventory Managers can access the Inventory Panel.\n\nContact: ransharipremarathna@gmail.com');
+        return;
+      }
+    }
+    
     if (setCurrentPage) {
       setCurrentPage(panelName);
       // Store the auth mode in sessionStorage for UserPanel to pick up
@@ -59,7 +72,16 @@ const Header = ({ setCurrentPage }) => {
               <li><a href="#user" onClick={(e) => { e.preventDefault(); handlePanelClick('user'); }}>👥 User Management</a></li>
               <li><a href="#order" onClick={(e) => { e.preventDefault(); handlePanelClick('order'); }}>📊 Order Management</a></li>
               <li><a href="#finance" onClick={(e) => { e.preventDefault(); handlePanelClick('finance'); }}>💰 Finance Management</a></li>
-              <li><a href="#inventory" onClick={(e) => { e.preventDefault(); handlePanelClick('inventory'); }}>📦 Inventory Management</a></li>
+              <li>
+                <a 
+                  href="#inventory" 
+                  onClick={(e) => { e.preventDefault(); handlePanelClick('inventory'); }}
+                  className={isLoggedIn && isInventoryManager(user) ? 'accessible' : 'restricted'}
+                  title={isLoggedIn && isInventoryManager(user) ? 'Access Inventory Management' : 'Inventory Manager Access Only'}
+                >
+                  📦 Inventory Management {!isLoggedIn || !isInventoryManager(user) ? '🔒' : ''}
+                </a>
+              </li>
               <li><a href="#helpdesk" onClick={(e) => { e.preventDefault(); handlePanelClick('helpdesk'); }}>🎧 Support System</a></li>
             </ul>
           </li>
