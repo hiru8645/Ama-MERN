@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaSearch, FaEye, FaUserTag, FaExclamationTriangle } from 'react-icons/fa';
 import AdminPDFGenerator from './AdminPDFGenerator';
 import './AdminTicketList.css';
 
-const AdminTicketList = () => {
+const AdminTicketList = ({ onViewTicket }) => {
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -191,13 +189,25 @@ const AdminTicketList = () => {
                           <td className="admin-ticket-actions">
                             <button 
                               className="admin-view-btn"
-                              onClick={() => navigate(`/admin/tickets/${ticket._id}`)}
+                              onClick={() => {
+                                if (onViewTicket) {
+                                  onViewTicket(ticket._id);
+                                } else {
+                                  console.log('View ticket:', ticket._id);
+                                }
+                              }}
                             >
                               <FaEye /> View
                             </button>
                             <button 
                               className="admin-assign-btn"
-                              onClick={() => navigate(`/admin/tickets/${ticket._id}`)}
+                              onClick={() => {
+                                if (onViewTicket) {
+                                  onViewTicket(ticket._id);
+                                } else {
+                                  console.log('Assign ticket:', ticket._id);
+                                }
+                              }}
                             >
                               <FaUserTag /> Assign
                             </button>

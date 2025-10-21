@@ -154,6 +154,7 @@
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
+  color: white !important;
 }
 
 .admin-status-open {
@@ -178,22 +179,22 @@
 
 .admin-priority-low {
   background-color: #3498db;
-  color: white;
+  color: white !important;
 }
 
 .admin-priority-medium {
   background-color: #f39c12;
-  color: white;
+  color: white !important;
 }
 
 .admin-priority-high {
   background-color: #e67e22;
-  color: white;
+  color: white !important;
 }
 
 .admin-priority-critical {
   background-color: #e74c3c;
-  color: white;
+  color: white !important;
 }
 
 /* Add these new styles for PDF generation */

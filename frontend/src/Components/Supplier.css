@@ -254,6 +254,20 @@
 .action-buttons {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.info-message {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fbbf24;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .filter-button,

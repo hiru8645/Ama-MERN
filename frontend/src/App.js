@@ -15,6 +15,8 @@ import UserPanel from './Components/UserPanel';
 import OrderPanel from './Components/OrderPanel';
 import FinancePanel from './Components/FinancePanel';
 import SupportPanel from './Components/SupportPanel';
+import AboutUs from './Components/AboutUs'; // ✅ Import AboutUs
+import ContactUs from './Components/ContactUs'; // ✅ Import ContactUs
 import { DashboardProvider } from './contexts/DashboardContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { InventoryProvider } from './contexts/InventoryContext';
@@ -88,6 +90,10 @@ function App() {
           return <FinancePanel setCurrentPage={setCurrentPage} />;
         case 'helpdesk':
           return <SupportPanel setCurrentPage={setCurrentPage} />;
+        case 'about':
+          return <AboutUs setCurrentPage={setCurrentPage} />;
+        case 'contact':
+          return <ContactUs setCurrentPage={setCurrentPage} />;
         default:
           return <Home setCurrentPage={setCurrentPage} />;
       }
@@ -101,7 +107,9 @@ function App() {
          currentPage !== 'user' && 
          currentPage !== 'order' && 
          currentPage !== 'profile' && 
-         currentPage !== 'helpdesk' && (
+         currentPage !== 'helpdesk' && 
+         currentPage !== 'about' && 
+         currentPage !== 'contact' && (
           <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
         )}
         <main style={{ 
@@ -111,13 +119,17 @@ function App() {
                    currentPage === 'user' || 
                    currentPage === 'order' || 
                    currentPage === 'profile' || 
-                   currentPage === 'helpdesk') ? '0' : '20px',
+                   currentPage === 'helpdesk' ||
+                   currentPage === 'about' ||
+                   currentPage === 'contact') ? '0' : '20px',
           width: (currentPage === 'home' || 
                  currentPage === 'finance' || 
                  currentPage === 'user' || 
                  currentPage === 'order' || 
                  currentPage === 'profile' || 
-                 currentPage === 'helpdesk') ? '100%' : 'calc(100% - 250px)'
+                 currentPage === 'helpdesk' ||
+                 currentPage === 'about' ||
+                 currentPage === 'contact') ? '100%' : 'calc(100% - 250px)'
         }}>
           {renderPage()}
         </main>

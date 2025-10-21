@@ -11,6 +11,7 @@ import Register from './User/Register';
 import UserProfile from './User/UserProfile';
 import AdminUsers from './User/Admin/AdminUsers';
 import AdminUserDetail from './User/Admin/AdminUserDetail';
+import AdminUserAdd from './User/Admin/AdminUserAdd';
 import AdminUserEdit from './User/AdminUserEdit';
 import UserDashboard from './User/UserDashboard/UserDashboard';
 
@@ -107,6 +108,12 @@ const UserPanel = ({ setCurrentPage }) => {
           } else if (currentView === 'user-edit') {
             return <AdminUserEdit 
               userId={selectedUserId}
+              setActiveTab={setActiveTab}
+              setCurrentView={setCurrentView}
+              onBack={() => setCurrentView('users-table')}
+            />;
+          } else if (currentView === 'user-add') {
+            return <AdminUserAdd 
               setActiveTab={setActiveTab}
               setCurrentView={setCurrentView}
               onBack={() => setCurrentView('users-table')}

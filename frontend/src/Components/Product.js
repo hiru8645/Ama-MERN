@@ -36,6 +36,13 @@ const Product = ({ setCurrentPage }) => {
     stockTotal: "",
     status: "",
     supplier: "",
+    // Supplier fields
+    supplierName: "",
+    supplierContact: "",
+    supplierEmail: "",
+    supplierPhone: "",
+    supplierAddress: "",
+    supplierBooks: "",
   });
 
   // Fetch all products from backend
@@ -155,8 +162,10 @@ const Product = ({ setCurrentPage }) => {
     // Form validation
     if (!newProduct.name || !newProduct.code || !newProduct.category || 
         !newProduct.price || !newProduct.stockCurrent || !newProduct.stockTotal || 
-        !newProduct.status || !newProduct.supplier) {
-      alert("All fields are required!");
+        !newProduct.status || !newProduct.supplier || !newProduct.supplierName || 
+        !newProduct.supplierContact || !newProduct.supplierEmail || !newProduct.supplierPhone || 
+        !newProduct.supplierAddress || !newProduct.supplierBooks) {
+      alert("All product and supplier fields are required!");
       return;
     }
 
@@ -182,21 +191,49 @@ const Product = ({ setCurrentPage }) => {
     }
 
     const statusText = newProduct.status.toUpperCase();
-    const payload = {
-      ...newProduct,
+    
+    // Prepare product payload (excluding supplier detail fields)
+    const productPayload = {
+      name: newProduct.name,
+      code: newProduct.code,
+      category: newProduct.category,
+      price: newProduct.price,
       stockCurrent,
       stockTotal,
       status: statusText,
+      supplier: newProduct.supplier,
       lastUpdated: new Date().toLocaleString(),
     };
     
+    // Prepare supplier payload
+    const supplierPayload = {
+      name: newProduct.supplierName,
+      contact: newProduct.supplierContact,
+      email: newProduct.supplierEmail,
+      phone: newProduct.supplierPhone,
+      address: newProduct.supplierAddress,
+      books: newProduct.supplierBooks,
+      lastUpdated: new Date().toISOString().slice(0, 10),
+    };
+    
     try {
+      // First, create/update the supplier
+      const supplierResponse = await fetch("http://localhost:5001/api/suppliers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(supplierPayload),
+      });
+      
+      if (!supplierResponse.ok) {
+        throw new Error('Failed to create supplier');
+      }
+      
       if (isEditing) {
         // Update product
         const response = await fetch(`${API_URL}/${editProductId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(productPayload),
         });
         
         if (!response.ok) {
@@ -207,7 +244,7 @@ const Product = ({ setCurrentPage }) => {
         const response = await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(productPayload),
         });
         
         if (!response.ok) {
@@ -254,6 +291,13 @@ const Product = ({ setCurrentPage }) => {
         stockTotal: "",
         status: "",
         supplier: "",
+        // Supplier fields
+        supplierName: "",
+        supplierContact: "",
+        supplierEmail: "",
+        supplierPhone: "",
+        supplierAddress: "",
+        supplierBooks: "",
       });
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -272,6 +316,13 @@ const Product = ({ setCurrentPage }) => {
       stockTotal: "",
       status: "",
       supplier: "",
+      // Supplier fields
+      supplierName: "",
+      supplierContact: "",
+      supplierEmail: "",
+      supplierPhone: "",
+      supplierAddress: "",
+      supplierBooks: "",
     });
   };
 
@@ -290,6 +341,13 @@ const Product = ({ setCurrentPage }) => {
       stockTotal: product.stockTotal,
       status: product.status,
       supplier: product.supplier,
+      // Supplier fields - initialize empty for edit mode
+      supplierName: "",
+      supplierContact: "",
+      supplierEmail: "",
+      supplierPhone: "",
+      supplierAddress: "",
+      supplierBooks: "",
     });
     setShowForm(true);
   };
@@ -340,8 +398,11 @@ const Product = ({ setCurrentPage }) => {
 
   return (
     <>
-      <Header setCurrentPage={setCurrentPage} />
-      <div className="product-container" style={{ marginLeft: '240px', marginTop: '80px' }}>
+      {setCurrentPage && <Header setCurrentPage={setCurrentPage} />}
+      <div className="product-container" style={{ 
+        marginLeft: setCurrentPage ? '240px' : '0', 
+        marginTop: setCurrentPage ? '80px' : '0' 
+      }}>
       {/* Hero Section */}
       <div className="hero-section">
         <div className="hero-content">
@@ -376,7 +437,7 @@ const Product = ({ setCurrentPage }) => {
             </button>
             <button onClick={handleAddButton} className="add-button">
               <FaPlus className="button-icon" />
-              Add Book
+              Add Book & Supplier
             </button>
           </div>
         </div>
@@ -528,7 +589,7 @@ const Product = ({ setCurrentPage }) => {
           <div className="modal-content">
             <div className="modal-header">
               <h2 className="modal-title">
-                {isEditing ? "Edit Book" : "Add New Book"}
+                {isEditing ? "Edit Book" : "Add New Book & Supplier"}
               </h2>
             </div>
             
@@ -649,6 +710,85 @@ const Product = ({ setCurrentPage }) => {
                 </div>
               </div>
               
+              {/* Supplier Details Section */}
+              <div className="form-section">
+                <h3 className="form-section-title">Supplier Details</h3>
+                <div className="form-fields-grid">
+                  <div className="form-group">
+                    <label className="form-label">Supplier Name *</label>
+                    <input
+                      name="supplierName"
+                      placeholder="Enter supplier name"
+                      value={newProduct.supplierName}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Contact Person *</label>
+                    <input
+                      name="supplierContact"
+                      placeholder="Enter contact person"
+                      value={newProduct.supplierContact}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Email *</label>
+                    <input
+                      name="supplierEmail"
+                      type="email"
+                      placeholder="Enter email address"
+                      value={newProduct.supplierEmail}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Phone *</label>
+                    <input
+                      name="supplierPhone"
+                      placeholder="Enter phone number"
+                      value={newProduct.supplierPhone}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Address *</label>
+                    <input
+                      name="supplierAddress"
+                      placeholder="Enter address"
+                      value={newProduct.supplierAddress}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Books Supplied *</label>
+                    <input
+                      name="supplierBooks"
+                      placeholder="Enter books supplied"
+                      value={newProduct.supplierBooks}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
               <div className="form-actions">
                 <button
                   type="button"
@@ -658,7 +798,7 @@ const Product = ({ setCurrentPage }) => {
                   Cancel
                 </button>
                 <button type="submit" className="submit-button">
-                  {isEditing ? "Update Book" : "Add Book"}
+                  {isEditing ? "Update Book" : "Add Book & Supplier"}
                 </button>
               </div>
             </form>

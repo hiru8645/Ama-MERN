@@ -1,23 +1,124 @@
-.orders-page { padding: 20px; }
-.orders-container { max-width: 1100px; margin: 0 auto; }
-.filters { display: flex; gap: 10px; margin-bottom: 16px; }
-.filters input, .filters select { padding: 8px 10px; border: 1px solid #dbe2e8; border-radius: 6px; }
-.orders-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #eef2f5; }
-.orders-table th, .orders-table td { padding: 10px 12px; border-bottom: 1px solid #f1f4f7; text-align: left; }
-.status-badge { padding: 4px 8px; border-radius: 10px; font-size: 12px; }
+.orders-page { 
+  padding: 20px; 
+  width: 100%; 
+  box-sizing: border-box;
+  margin-left: 0; /* Reset any margin */
+  flex: 1; /* If using flexbox layout */
+}
+
+.orders-container { 
+  width: 100%; 
+  max-width: none; 
+  margin: 0;
+  overflow-x: auto; /* Allow horizontal scroll if needed */
+}
+
+.filters { 
+  display: flex; 
+  gap: 10px; 
+  margin-bottom: 16px; 
+}
+
+.filters input, .filters select { 
+  padding: 8px 10px; 
+  border: 1px solid #dbe2e8; 
+  border-radius: 6px; 
+}
+
+.orders-table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  background: #fff; 
+  border: 1px solid #eef2f5; 
+  table-layout: auto; /* Changed from fixed to auto for better distribution */
+  min-width: 100%;
+}
+
+.orders-table th, .orders-table td { 
+  padding: 12px 16px; 
+  border-bottom: 1px solid #f1f4f7; 
+  text-align: left; 
+  word-wrap: break-word; 
+}
+
+/* Adjusted column width distribution for better spacing */
+.orders-table th:nth-child(1), .orders-table td:nth-child(1) { width: 10%; } /* Order ID */
+.orders-table th:nth-child(2), .orders-table td:nth-child(2) { width: 15%; } /* User */
+.orders-table th:nth-child(3), .orders-table td:nth-child(3) { width: 13%; } /* Status */
+.orders-table th:nth-child(4), .orders-table td:nth-child(4) { width: 13%; } /* Total Items */
+.orders-table th:nth-child(5), .orders-table td:nth-child(5) { width: 13%; } /* Total Price */
+.orders-table th:nth-child(6), .orders-table td:nth-child(6) { width: 24%; } /* Placed On */
+.orders-table th:nth-child(7), .orders-table td:nth-child(7) { width: 12%; } /* Action */
+
+.status-badge { 
+  padding: 4px 8px; 
+  border-radius: 10px; 
+  font-size: 12px; 
+  display: inline-block; /* Ensure proper rendering */
+}
+
 .status-badge.pending { background: #fff4e5; color: #b26a00; }
 .status-badge.approved { background: #e9f8ef; color: #1e7a36; }
 .status-badge.rejected { background: #fdecea; color: #9f2d20; }
 .status-badge.cancelled { background: #f1f2f3; color: #5f6b73; }
 .status-badge.completed { background: #e8f1fb; color: #1f5ea8; }
-.view-btn { background: #2d6cdf; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+
+.view-btn { 
+  background: #2d6cdf; 
+  color: #fff; 
+  border: none; 
+  padding: 8px 12px; 
+  border-radius: 6px; 
+  cursor: pointer; 
+}
+
 .view-btn.danger { background: #e74c3c; }
 .view-btn.primary { background: #2980b9; }
 .view-btn.muted { background: #7f8c8d; }
-.order-card { background: #fff; border: 1px solid #eef2f5; border-radius: 10px; padding: 16px; margin-top: 12px; }
-.order-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.order-card-body ul { margin: 6px 0 0 16px; }
-.order-book-id { font-family: monospace; color: #7f8c8d; }
-.order-item-price { margin-left: 8px; color: #34495e; }
-.actions-row { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
 
+.order-card { 
+  background: #fff; 
+  border: 1px solid #eef2f5; 
+  border-radius: 10px; 
+  padding: 16px; 
+  margin-top: 12px; 
+}
+
+.order-card-header { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  margin-bottom: 12px; 
+}
+
+.order-card-body ul { 
+  margin: 6px 0 0 16px; 
+}
+
+.order-book-id { 
+  font-family: monospace; 
+  color: #7f8c8d; 
+}
+
+.order-item-price { 
+  margin-left: 8px; 
+  color: #34495e; 
+}
+
+.actions-row { 
+  display: flex; 
+  gap: 8px; 
+  margin-top: 12px; 
+  align-items: center; 
+}
+
+.back-btn { 
+  background: #2d6cdf; 
+  color: #fff; 
+  border: none; 
+  padding: 6px 10px; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-size: 12px;
+  font-weight: 500;
+}

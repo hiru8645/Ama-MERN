@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './AdminUserEdit.css';
 
-const AdminUserEdit = ({ setActiveTab, setCurrentView, currentUser, setCurrentUser }) => {
+const AdminUserEdit = ({ userId, setActiveTab, setCurrentView, onBack }) => {
+  const [currentUser, setCurrentUser] = useState(null);
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -21,18 +22,41 @@ const AdminUserEdit = ({ setActiveTab, setCurrentView, currentUser, setCurrentUs
   const [pwMsg, setPwMsg] = useState('');
   const [pwErr, setPwErr] = useState('');
 
+  // Fetch user data when component loads
   useEffect(() => {
-    if (currentUser) {
-      setForm({
-        full_name: currentUser.full_name || '',
-        email: currentUser.email || '',
-        uni_id: currentUser.uni_id || '',
-        role: currentUser.role || 'user',
-        contact_no: currentUser.contact_no || '',
-        faculty: currentUser.faculty || ''
-      });
-    }
-  }, [currentUser]);
+    const fetchUser = async () => {
+      if (!userId) return;
+      
+      setLoading(true);
+      setErr('');
+      
+      try {
+        const res = await fetch(`http://localhost:5001/api/users/${userId}`);
+        const data = await res.json();
+        
+        if (res.ok) {
+          setCurrentUser(data.user);
+          setForm({
+            full_name: data.user.full_name || '',
+            email: data.user.email || '',
+            uni_id: data.user.uni_id || '',
+            role: data.user.role || 'user',
+            contact_no: data.user.contact_no || '',
+            faculty: data.user.faculty || ''
+          });
+        } else {
+          setErr(data.message || 'Failed to load user');
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        setErr('Failed to load user');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [userId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -65,7 +89,11 @@ const AdminUserEdit = ({ setActiveTab, setCurrentView, currentUser, setCurrentUs
         
         // Auto-navigate back to user details after successful save
         setTimeout(() => {
-          setCurrentView('userDetail');
+          if (onBack) {
+            onBack();
+          } else {
+            setCurrentView('user-detail');
+          }
         }, 1500);
       } else {
         setErr(data.message || 'Failed to update user');
@@ -141,7 +169,11 @@ const AdminUserEdit = ({ setActiveTab, setCurrentView, currentUser, setCurrentUs
         
         // Navigate back to users list after deletion
         setTimeout(() => {
-          setCurrentView('users');
+          if (onBack) {
+            onBack();
+          } else {
+            setCurrentView('users-table');
+          }
           setCurrentUser(null);
         }, 1500);
       } else {
@@ -156,14 +188,24 @@ const AdminUserEdit = ({ setActiveTab, setCurrentView, currentUser, setCurrentUs
     }
   };
 
-  if (!currentUser) {
+  if (loading && !currentUser) {
     return (
       <div className="admin-user-edit">
         <div className="edit-container">
-          <p>No user selected for editing.</p>
+          <p>Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser && !loading) {
+    return (
+      <div className="admin-user-edit">
+        <div className="edit-container">
+          <p>No user selected for editing or user not found.</p>
           <button 
             className="back-btn"
-            onClick={() => setCurrentView('users')}
+            onClick={() => onBack ? onBack() : setCurrentView('users-table')}
           >
             ← Back to Users
           </button>
@@ -182,9 +224,9 @@ const AdminUserEdit = ({ setActiveTab, setCurrentView, currentUser, setCurrentUs
           </div>
           <button 
             className="back-btn"
-            onClick={() => setCurrentView('userDetail')}
+            onClick={() => onBack ? onBack() : setCurrentView('users-table')}
           >
-            ← Back to Details
+            ← Back to Users
           </button>
         </div>
 

@@ -1,5 +1,6 @@
 const Order = require("../Model/OrderModel");
 const Book = require("../Model/InventoryModel");
+const Product = require("../Model/ProductModel");
 const Notification = require("../Model/NotificationModel");
 
 exports.createOrder = async (req, res) => {
@@ -15,18 +16,44 @@ exports.createOrder = async (req, res) => {
     const orderItems = [];
 
     for (const item of items) {
-      const book = await Book.findOne({ bookId: item.bookId }) || await Book.findById(item.bookId);
+      // First try to find by custom product code, then by bookId in inventory
+      let book = await Book.findOne({ bookId: item.bookId });
+      
+      // If not found in inventory, try to find in products by code and sync to inventory
+      if (!book) {
+        const product = await Product.findOne({ code: item.bookId });
+        if (product) {
+          // Create inventory entry from product data
+          book = new Book({
+            bookId: product.code,
+            itemName: product.name,
+            quantity: product.stockCurrent,
+            price: parseFloat(product.price)
+          });
+          await book.save();
+        }
+      }
+      
       if (!book) {
         return res.status(404).json({ success: false, message: `Book not found: ${item.bookId}` });
       }
       if (book.quantity < item.quantity) {
         return res.status(400).json({ success: false, message: `Not enough quantity for ${book.itemName}` });
       }
+      
+      // Reduce stock in inventory
       book.quantity -= item.quantity;
       await book.save();
 
+      // Also reduce stock in products collection if it exists
+      const product = await Product.findOne({ code: item.bookId });
+      if (product) {
+        product.stockCurrent = Math.max(0, product.stockCurrent - item.quantity);
+        await product.save();
+      }
+
       orderItems.push({
-        bookId: book.bookId,
+        bookId: book.bookId, // This will now be the custom product code
         itemName: book.itemName,
         price: book.price,
         quantity: item.quantity
@@ -130,6 +157,23 @@ exports.rejectOrder = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
     if (order.status !== "Pending") return res.status(400).json({ success: false, message: "Only pending orders can be rejected" });
+    
+    // Restore inventory quantities when rejecting
+    for (const item of order.items) {
+      const book = await Book.findOne({ bookId: item.bookId }) || await Book.findById(item.bookId);
+      if (book) {
+        book.quantity += item.quantity;
+        await book.save();
+      }
+      
+      // Also restore stock in products collection if it exists
+      const product = await Product.findOne({ code: item.bookId });
+      if (product) {
+        product.stockCurrent += item.quantity;
+        await product.save();
+      }
+    }
+    
     order.status = "Rejected";
     order.approval = { approvedBy: req.body.approvedBy || "Admin", approvedAt: new Date(), rejectedReason: req.body.rejectedReason || "" };
     await order.save();
@@ -216,6 +260,13 @@ exports.cancelOrder = async (req, res) => {
         book.quantity += item.quantity;
         await book.save();
       }
+      
+      // Also restore stock in products collection if it exists
+      const product = await Product.findOne({ code: item.bookId });
+      if (product) {
+        product.stockCurrent += item.quantity;
+        await product.save();
+      }
     }
     
     order.status = "Cancelled";
@@ -245,8 +296,10 @@ exports.deleteOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-    if (order.status !== "Rejected" && order.status !== "Cancelled" && order.status !== "Completed") {
-      return res.status(403).json({ success: false, message: "Only completed, rejected or cancelled orders can be deleted" });
+    
+    // Allow deletion of Pending orders as well as Completed, Cancelled, and Rejected orders
+    if (order.status !== "Pending" && order.status !== "Rejected" && order.status !== "Cancelled" && order.status !== "Completed") {
+      return res.status(403).json({ success: false, message: "Only pending, completed, rejected or cancelled orders can be deleted" });
     }
     
     // Restore inventory quantities before deleting the order
@@ -302,12 +355,27 @@ exports.updateOrder = async (req, res) => {
         oldBook.quantity += currentItem.quantity;
         await oldBook.save();
       }
+      
+      // Also restore stock in old product
+      const oldProduct = await Product.findOne({ code: currentItem.bookId });
+      if (oldProduct) {
+        oldProduct.stockCurrent += currentItem.quantity;
+        await oldProduct.save();
+      }
+      
       // deduct full new quantity from new book
       if (newBook.quantity < newItem.quantity) {
         return res.status(400).json({ success: false, message: `Not enough quantity for ${newBook.itemName}` });
       }
       newBook.quantity -= newItem.quantity;
       await newBook.save();
+      
+      // Also reduce stock in new product
+      const newProduct = await Product.findOne({ code: newBook.bookId });
+      if (newProduct) {
+        newProduct.stockCurrent = Math.max(0, newProduct.stockCurrent - newItem.quantity);
+        await newProduct.save();
+      }
     } else {
       // Same book, only adjust by delta
       const delta = newItem.quantity - currentItem.quantity;
@@ -317,9 +385,23 @@ exports.updateOrder = async (req, res) => {
         }
         newBook.quantity -= delta;
         await newBook.save();
+        
+        // Also reduce stock in product
+        const product = await Product.findOne({ code: newBook.bookId });
+        if (product) {
+          product.stockCurrent = Math.max(0, product.stockCurrent - delta);
+          await product.save();
+        }
       } else if (delta < 0) {
         newBook.quantity += Math.abs(delta);
         await newBook.save();
+        
+        // Also increase stock in product
+        const product = await Product.findOne({ code: newBook.bookId });
+        if (product) {
+          product.stockCurrent += Math.abs(delta);
+          await product.save();
+        }
       }
     }
 

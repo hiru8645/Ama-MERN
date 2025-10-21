@@ -107,7 +107,7 @@ function AdminOrderDetail({ setActiveTab, setCurrentView }) {
     <div className="orders-page">
       <div className="orders-container">
         <button 
-          className="view-btn" 
+          className="back-btn" 
           onClick={goBack}
           style={{ marginBottom: '1rem' }}
         >

@@ -11,17 +11,28 @@ function AdminOrdersDashboard({ setActiveTab, setCurrentView }) {
   };
 
   return (
-    <div className="admin-orders-dashboard">
-      <div className="orders-container">
-        <div className="dashboard-header">
-          <h2>📦 Orders - Admin Dashboard</h2>
-          <p style={{ color: '#666', marginBottom: '2rem' }}>
-            Manage and monitor all customer orders from this central dashboard. 
-            View order statistics, process pending orders, and generate reports.
-          </p>
-        </div>
-
-        <div className="dashboard-content">
+    <div className="admin-orders-dashboard" style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'flex-start', 
+      minHeight: '100vh', 
+      padding: '2rem',
+      background: '#f8f9fa'
+    }}>
+      <div className="orders-container" style={{
+        maxWidth: '1200px',
+        width: '100%',
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        padding: '2rem'
+      }}>
+        <div className="dashboard-content" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center'
+        }}>
           <div className="dashboard-actions" style={{ marginBottom: '2rem' }}>
             <button 
               className="go-to-orders-btn"
@@ -51,7 +62,15 @@ function AdminOrdersDashboard({ setActiveTab, setCurrentView }) {
             </button>
           </div>
 
-          <div className="dashboard-info" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div className="dashboard-info" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '1.5rem',
+            width: '100%',
+            maxWidth: '900px',
+            justifyItems: 'center',
+            justifyContent: 'center'
+          }}>
             <div className="info-card" style={{ background: '#f8f9fa', padding: '1.5rem', borderRadius: '10px', border: '1px solid #e9ecef' }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
                 <div style={{ fontSize: '2rem', marginRight: '1rem' }}>📊</div>

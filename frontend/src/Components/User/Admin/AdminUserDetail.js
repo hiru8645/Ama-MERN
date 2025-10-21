@@ -119,37 +119,6 @@ const AdminUserDetail = ({ userId, onBack }) => {
               </div>
             </div>
           </div>
-          
-          <div className="action-buttons" style={{ marginTop: '30px', textAlign: 'center' }}>
-            <button
-              style={{ 
-                padding: '12px 24px', 
-                margin: '0 10px',
-                background: '#ffc107', 
-                color: '#212529', 
-                border: 'none', 
-                borderRadius: '5px', 
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              ✏️ Edit User
-            </button>
-            <button
-              style={{ 
-                padding: '12px 24px', 
-                margin: '0 10px',
-                background: '#dc3545', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '5px', 
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              🗑️ Delete User
-            </button>
-          </div>
         </div>
       </div>
     </div>

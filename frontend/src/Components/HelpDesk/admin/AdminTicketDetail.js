@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom'; // already imported useParams
 import { 
   FaUser, FaListAlt, FaCalendarAlt, FaTag, FaExclamationTriangle,
   FaCheck, FaPaperPlane, FaTimes, FaUserPlus, FaSpinner
 } from 'react-icons/fa';
 import { MdDescription } from 'react-icons/md';
-import AdminHeader from './AdminHeader';
-import AdminSidebar from './AdminSidebar';
 import './AdminTicketDetail.css';
 
-const AdminTicketDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate(); // Add this
+const AdminTicketDetail = ({ ticketId, onBack }) => {
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,13 +16,14 @@ const AdminTicketDetail = () => {
   const [responseLoading, setResponseLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('tickets');
 
   useEffect(() => {
     const fetchTicketDetails = async () => {
+      if (!ticketId) return;
+      
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5001/api/tickets/${id}`); // <-- Use id here
+        const response = await fetch(`http://localhost:5001/api/tickets/${ticketId}`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch ticket details');
@@ -35,6 +31,9 @@ const AdminTicketDetail = () => {
         
         const data = await response.json();
         setTicket(data.data);
+        if (data.data.status) {
+          setStatusUpdate(data.data.status);
+        }
       } catch (err) {
         console.error('Error:', err);
         setError('Failed to load ticket details');
@@ -44,7 +43,7 @@ const AdminTicketDetail = () => {
     };
 
     fetchTicketDetails();
-  }, [id]); // <-- Use id from URL
+  }, [ticketId]);
 
   const handleAddResponse = async (e) => {
     e.preventDefault();
@@ -57,7 +56,7 @@ const AdminTicketDetail = () => {
         message: response
       };
 
-      const resp = await fetch(`http://localhost:5001/api/tickets/${id}/responses`, {
+      const resp = await fetch(`http://localhost:5001/api/tickets/${ticketId}/responses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +84,7 @@ const AdminTicketDetail = () => {
 
     try {
       setStatusLoading(true);
-      const resp = await fetch(`http://localhost:5001/api/tickets/${id}/status`, {
+      const resp = await fetch(`http://localhost:5001/api/tickets/${ticketId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +112,7 @@ const AdminTicketDetail = () => {
 
     try {
       setAssignLoading(true);
-      const resp = await fetch(`http://localhost:5001/api/tickets/${id}/assign`, {
+      const resp = await fetch(`http://localhost:5001/api/tickets/${ticketId}/assign`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -163,7 +162,7 @@ const AdminTicketDetail = () => {
       <div className="admin-detail-error">
         <FaExclamationTriangle className="admin-detail-error-icon" />
         <p>{error}</p>
-        <button className="admin-btn" onClick={() => navigate('/admin/tickets')}>Go Back</button>
+        <button className="admin-btn" onClick={() => onBack ? onBack() : window.history.back()}>Go Back</button>
       </div>
     );
   }
@@ -181,23 +180,18 @@ const AdminTicketDetail = () => {
   };
 
   return (
-    <div>
-      <AdminHeader />
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 60px)' }}>
-        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
-        <div style={{ flex: 1 }}>
-          <div className="admin-ticket-detail">
-            <div className="admin-detail-header">
-              <div className="admin-detail-header-left">
-                <h2>Ticket #{ticket._id.slice(-6).toUpperCase()}</h2>
-                <span className={`admin-status-badge ${getStatusClass(ticket.status)}`}>
-                  {ticket.status}
-                </span>
-              </div>
-              <button className="admin-close-btn" onClick={() => navigate('/admin/tickets')}>
-                <FaTimes />
-              </button>
-            </div>
+    <div className="admin-ticket-detail">
+      <div className="admin-detail-header">
+        <div className="admin-detail-header-left">
+          <h2>Ticket #{ticket._id.slice(-6).toUpperCase()}</h2>
+          <span className={`admin-status-badge ${getStatusClass(ticket.status)}`}>
+            {ticket.status}
+          </span>
+        </div>
+        <button className="admin-close-btn" onClick={() => onBack ? onBack() : window.history.back()}>
+          <FaTimes />
+        </button>
+      </div>
 
             <div className="admin-detail-content">
               <div className="admin-detail-main">
@@ -374,9 +368,6 @@ const AdminTicketDetail = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

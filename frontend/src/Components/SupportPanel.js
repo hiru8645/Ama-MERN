@@ -4,12 +4,15 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import TicketDashboard from './HelpDesk/user/TicketDashboard';
 import AdminTicketList from './HelpDesk/admin/AdminTicketList';
+import AdminTicketDetail from './HelpDesk/admin/AdminTicketDetail';
 import AdminStats from './HelpDesk/admin/AdminStats';
 import '../Components/PanelLayout.css';
 import './UserPanel.css';
 
 const SupportPanel = ({ setCurrentPage }) => {
   const [activeTab, setActiveTab] = useState('tickets');
+  const [currentView, setCurrentView] = useState('list'); // 'list' or 'detail'
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
   const { user, isLoggedIn } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.email === 'admin@gmail.com';
 
@@ -17,6 +20,18 @@ const SupportPanel = ({ setCurrentPage }) => {
     { id: 'tickets', label: 'Tickets', icon: <FaTicketAlt /> },
     { id: 'stats', label: 'Statistics', icon: <FaChartBar /> },
   ];
+
+  // Handle navigation to ticket detail
+  const handleViewTicket = (ticketId) => {
+    setSelectedTicketId(ticketId);
+    setCurrentView('detail');
+  };
+
+  // Handle back to list
+  const handleBackToList = () => {
+    setCurrentView('list');
+    setSelectedTicketId(null);
+  };
 
   const renderMainContent = () => {
     if (!isLoggedIn) {
@@ -30,7 +45,24 @@ const SupportPanel = ({ setCurrentPage }) => {
 
     switch (activeTab) {
       case 'tickets':
-        return isAdmin ? <AdminTicketList /> : <TicketDashboard />;
+        if (isAdmin) {
+          if (currentView === 'detail' && selectedTicketId) {
+            return (
+              <AdminTicketDetail 
+                ticketId={selectedTicketId}
+                onBack={handleBackToList}
+              />
+            );
+          } else {
+            return (
+              <AdminTicketList 
+                onViewTicket={handleViewTicket}
+              />
+            );
+          }
+        } else {
+          return <TicketDashboard />;
+        }
       case 'stats':
         return isAdmin ? <AdminStats /> : (
           <div className="access-denied">
@@ -66,7 +98,14 @@ const SupportPanel = ({ setCurrentPage }) => {
               <button 
                 key={item.id}
                 className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  // Reset to list view when changing tabs
+                  if (item.id === 'tickets') {
+                    setCurrentView('list');
+                    setSelectedTicketId(null);
+                  }
+                }}
               >
                 {item.icon} {item.label}
               </button>

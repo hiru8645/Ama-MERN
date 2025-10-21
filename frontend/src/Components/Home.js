@@ -98,8 +98,8 @@ const Home = ({ setCurrentPage }) => {
                   <li><a href="#helpdesk" onClick={(e) => { e.preventDefault(); handlePanelClick('helpdesk'); }}>🎧 Support System</a></li>
                 </ul>
               </li>
-              <li><a href="#about">About Us</a></li>
-              <li><a href="#contact">Contact Us</a></li>
+              <li><a href="#about" onClick={(e) => { e.preventDefault(); handlePanelClick('about'); }}>About Us</a></li>
+              <li><a href="#contact" onClick={(e) => { e.preventDefault(); handlePanelClick('contact'); }}>Contact Us</a></li>
               {isLoggedIn ? (
                 <>
                   <li className="user-greeting">

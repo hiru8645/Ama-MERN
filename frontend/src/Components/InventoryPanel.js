@@ -85,9 +85,9 @@ const InventoryPanel = ({ setCurrentPage }) => {
 
     switch (sidebarActive) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard setCurrentPage={setCurrentPage} />;
       case 'products':
-        return <Product />;
+        return <Product setCurrentPage={setCurrentPage} />;
       case 'categories':
         return (
           <Category 
@@ -99,15 +99,15 @@ const InventoryPanel = ({ setCurrentPage }) => {
           />
         );
       case 'alerts':
-        return <Alerts />;
+        return <Alerts setCurrentPage={setCurrentPage} />;
       case 'suppliers':
-        return <Supplier />;
+        return <Supplier setCurrentPage={setCurrentPage} />;
       case 'reports':
-        return <InventoryReport />;
+        return <InventoryReport setCurrentPage={setCurrentPage} />;
       case 'borrow-return':
-        return <BorrowReturn />;
+        return <BorrowReturn setCurrentPage={setCurrentPage} />;
       default:
-        return <Dashboard />;
+        return <Dashboard setCurrentPage={setCurrentPage} />;
     }
   };
 

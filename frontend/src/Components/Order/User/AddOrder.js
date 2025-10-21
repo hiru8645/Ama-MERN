@@ -75,7 +75,7 @@ function AddOrder({ setActiveTab, setCurrentView }) {
       
       const payload = {
         items: [{ 
-          bookId: book.bookId || book._id, 
+          bookId: book.bookId || book.code || book._id, // Prefer custom product code
           quantity: qty,
           itemName: book.itemName,
           price: book.price
@@ -111,12 +111,19 @@ function AddOrder({ setActiveTab, setCurrentView }) {
         throw new Error(data.message || (isEditing ? "Failed to update order" : "Failed to create order"));
       }
       
-      // Clear session storage and navigate back to my orders
+      // Clear session storage and navigate back appropriately
       sessionStorage.removeItem('selectedBook');
       sessionStorage.removeItem('editingOrder');
       if (setActiveTab && setCurrentView) {
-        setActiveTab('my-orders');
-        setCurrentView('my-orders');
+        if (isEditing) {
+          // If editing, go back to my orders
+          setActiveTab('my-orders');
+          setCurrentView('my-orders');
+        } else {
+          // If creating new order, stay on books or go to my orders to see the new order
+          setActiveTab('my-orders');
+          setCurrentView('my-orders');
+        }
       }
     } catch (e) {
       setError(e.message || "Failed to process order");
@@ -126,11 +133,19 @@ function AddOrder({ setActiveTab, setCurrentView }) {
   };
 
   const cancel = () => {
+    const isEditing = sessionStorage.getItem('editingOrder') !== null;
     sessionStorage.removeItem('selectedBook');
     sessionStorage.removeItem('editingOrder');
     if (setActiveTab && setCurrentView) {
-      setActiveTab('books');
-      setCurrentView('books');
+      if (isEditing) {
+        // If editing, go back to my orders
+        setActiveTab('my-orders');
+        setCurrentView('my-orders');
+      } else {
+        // If creating new order, go back to books
+        setActiveTab('books');
+        setCurrentView('books');
+      }
     }
   };
 
@@ -169,7 +184,7 @@ function AddOrder({ setActiveTab, setCurrentView }) {
                 <div><strong>Title:</strong> {book.itemName}</div>
                 <div><strong>Price:</strong> Rs. {book.price}</div>
                 <div><strong>Available:</strong> {book.quantity} copies</div>
-                <div><strong>Book Code:</strong> {book.bookId || book._id}</div>
+                <div><strong>Book Code:</strong> {book.bookId || book.code || book._id}</div>
               </div>
             </div>
 
@@ -208,7 +223,7 @@ function AddOrder({ setActiveTab, setCurrentView }) {
                 <input 
                   id="bookCode"
                   type="text" 
-                  value={book.bookId || book._id} 
+                  value={book.bookId || book.code || book._id} 
                   readOnly
                   className="readonly-field"
                 />

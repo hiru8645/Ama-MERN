@@ -85,8 +85,8 @@ const Category = ({ viewBookDescription = () => {}, setCurrentPage }) => {
 
   return (
     <>
-      <Header setCurrentPage={setCurrentPage} />
-      <div className="category-container" style={{ marginTop: '80px' }}>
+      {setCurrentPage && <Header setCurrentPage={setCurrentPage} />}
+      <div className="category-container" style={{ marginTop: setCurrentPage ? '80px' : '0' }}>
       <div className="hero-section">
         <div className="hero-content">
           <h1 className="hero-title">

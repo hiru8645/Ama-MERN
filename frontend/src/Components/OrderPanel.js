@@ -74,6 +74,8 @@ const OrderPanel = ({ setCurrentPage }) => {
         // Handle different views within my-orders section  
         if (currentView === 'order-detail') {
           return <OrderDetail setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
+        } else if (currentView === 'add-order') {
+          return <AddOrder setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
         }
         return <MyOrders setActiveTab={setActiveTab} setCurrentView={setCurrentView} />;
       default:

@@ -33,6 +33,8 @@ const getAllUsers = async (req, res, next) => {
 const addUser = async (req, res, next) => {
     const { full_name, email, uni_id, password, role, contact_no, faculty } = req.body;
 
+    console.log('Received add user request:', { full_name, email, uni_id, role, contact_no, faculty, hasPassword: !!password });
+
     try {
         // Check for existing email or uni_id
         const existingUser = await User.findOne({ $or: [{ email }, { uni_id }] });
@@ -93,8 +95,23 @@ const addUser = async (req, res, next) => {
 
         return res.status(201).json({ user });
     } catch (err) {
-        console.log(err);
-        return res.status(500).json({ message: "Unable to add user" });
+        console.log('Error adding user:', err);
+        
+        // Handle validation errors
+        if (err.name === 'ValidationError') {
+            const errors = Object.values(err.errors).map(error => error.message);
+            return res.status(400).json({ message: errors.join(', ') });
+        }
+        
+        // Handle duplicate key errors
+        if (err.code === 11000) {
+            const duplicateField = Object.keys(err.keyPattern)[0];
+            return res.status(400).json({ 
+                message: `${duplicateField === 'email' ? 'Email' : 'University ID'} is already registered` 
+            });
+        }
+        
+        return res.status(500).json({ message: "Unable to add user. Please try again." });
     }
 };
 //Get by Id
@@ -121,13 +138,18 @@ const updateUser = async (req,res,next) =>{
      let user;
 
       try{
-        user = await User.findByIdAndUpdate(id,{full_name:full_name, email:email, uni_id:uni_id, password:password, role:role, contact_no:contact_no, faculty:faculty });
-        user=await user.save();
+        // Use {new: true} to return the updated document
+        user = await User.findByIdAndUpdate(
+            id,
+            {full_name:full_name, email:email, uni_id:uni_id, password:password, role:role, contact_no:contact_no, faculty:faculty},
+            {new: true}
+        );
     }catch(err){
         console.log(err);
+        return res.status(500).json({ message: "Error updating user details" });
     }
      if (!user) {
-        return res.status(404).json({ message: "Unableto update user Details" });
+        return res.status(404).json({ message: "Unable to update user details" });
     }
 
     return res.status(200).json({ user });

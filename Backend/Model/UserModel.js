@@ -13,15 +13,15 @@ const userSchema = new Schema({
     password: { type: String, required: true },
     role: {
         type: String,
-        enum: ["student", "lecturer"],
-        default: "student",
+        enum: ["user", "staff", "admin", "student", "lecturer"],
+        default: "user",
     },
     contact_no: {
         type: String,
-        required: true,
-        match: [/^[0-9]{10}$/, "Contact number must be 10 digits"],
+        required: false,
+        match: [/^[0-9+\-\s()]*$/, "Please enter a valid contact number"],
     },
-    faculty: { type: String, required: true, trim: true },
+    faculty: { type: String, required: false, trim: true },
 });
 
 module.exports = mongoose.model("UserModel", userSchema);

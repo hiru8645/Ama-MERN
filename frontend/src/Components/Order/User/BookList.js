@@ -21,7 +21,7 @@ function BookList({ setActiveTab, setCurrentView }) {
             itemName: product.name,
             price: parseFloat(product.price) || 0,
             quantity: product.stockCurrent || 0,
-            bookId: product._id,
+            bookId: product.code, // Use custom product code instead of MongoDB ID
             description: product.description || `${product.category} - ${product.code}`,
             category: product.category,
             code: product.code,

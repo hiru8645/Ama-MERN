@@ -25,7 +25,7 @@ ChartJS.register(
   Legend
 );
 
-function FinanceDashboard() {
+function FinanceDashboard({ setActiveSection }) {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -181,31 +181,31 @@ function FinanceDashboard() {
 
         {/* Dashboard cards */}
         <div className="dashboard-cards">
-          <div className="dashboard-card wallet" onClick={() => navigate("/wallet")}>
+          <div className="dashboard-card wallet" onClick={() => setActiveSection && setActiveSection("wallet")}>
             <Wallet2 size={28} />
             <h3>Wallet Management</h3>
             <p>Check and manage user & system wallets.</p>
           </div>
 
-          <div className="dashboard-card payment" onClick={() => navigate("/payment")}>
+          <div className="dashboard-card payment" onClick={() => setActiveSection && setActiveSection("payment")}>
             <CreditCard size={28} />
             <h3>Payment Management</h3>
             <p>View, approve, and reject payments.</p>
           </div>
 
-          <div className="dashboard-card refund" onClick={() => navigate("/refund-request")}>
+          <div className="dashboard-card refund" onClick={() => setActiveSection && setActiveSection("refund")}>
             <RefreshCcw size={28} />
             <h3>Refund Requests</h3>
             <p>Monitor and process refund requests.</p>
           </div>
 
-          <div className="dashboard-card fines" onClick={() => navigate("/fines")}>
+          <div className="dashboard-card fines" onClick={() => setActiveSection && setActiveSection("fines")}>
             <FileText size={28} />
             <h3>Fines Management</h3>
             <p>Track fines and overdue payments.</p>
           </div>
 
-          <div className="dashboard-card reports" onClick={() => navigate("/reports")}>
+          <div className="dashboard-card reports" onClick={() => setActiveSection && setActiveSection("reports")}>
             <FileText size={28} />
             <h3>Reports</h3>
             <p>Generate finance reports for any day.</p>

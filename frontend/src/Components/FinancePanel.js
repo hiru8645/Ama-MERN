@@ -3,21 +3,20 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import FinanceSidebar from './Finance/FinanceSidebar';
 
-// Admin Components
-import FinanceDashboard from './Finance/Admin/FinanceDashboard/FinanceDashboard';
-import Wallet from './Finance/Admin/Wallet/Wallet';
-import Payment from './Finance/Admin/Payment/Payment';
-import RefundRequest from './Finance/Admin/RefundRequest/RefundRequest';
-import FinesAdmin from './Finance/Admin/FinesAdmin/FinesAdmin';
-import Reports from './Finance/Admin/Reports/Reports';
+// Admin Components (gets management/display functionality)
+import FinanceDashboard from './Finance/User/UserDashboard/UserDashboard';
+import AdminPayment from './Finance/Admin/Payment/Payment';  // Admin gets payment management list
+import AdminRefundRequest from './Finance/Admin/RefundRequest/RefundRequest';  // Admin gets refund management list
+import AdminFines from './Finance/Admin/FinesAdmin/FinesAdmin';  // Admin gets fines management with approve/reject
+import AdminTransactions from './Finance/User/UserTransactions/UserTransactions';
 
-// User Components
-import UserDashboard from './Finance/User/UserDashboard/UserDashboard';
-import UserWalletManagement from './Finance/User/UserWalletManagement/UserWalletManagement';
-import UserPayment from './Finance/User/UserPayment/UserPayment';
-import RequestRefund from './Finance/User/RequestRefund/RequestRefund';
-import UserFines from './Finance/User/UserFines/UserFines';
-import UserTransactions from './Finance/User/UserTransactions/UserTransactions';
+// User Components (gets form functionality)
+import UserDashboard from './Finance/Admin/FinanceDashboard/FinanceDashboard';
+import UserWalletManagement from './Finance/Admin/Wallet/Wallet';
+import UserPayment from './Finance/User/UserPayment/UserPayment';  // User gets payment form
+import RequestRefund from './Finance/User/RequestRefund/RequestRefund';  // User gets refund form
+import UserFines from './Finance/User/UserFines/UserFines';  // User gets personal fines view
+import UserReports from './Finance/Admin/Reports/Reports';
 
 import './FinancePanel.css';
 
@@ -29,23 +28,25 @@ const FinancePanel = ({ setCurrentPage }) => {
 
   const renderActiveSection = () => {
     if (isAdmin) {
-      // Admin sections
+      // Admin sections (now uses former user components)
       switch (activeSection) {
         case 'dashboard':
-          return <FinanceDashboard />;
+          return <FinanceDashboard setActiveSection={setActiveSection} />;
+        case 'wallet':
+          return <UserWalletManagement />;
         case 'payment':
-          return <Payment />;
+          return <AdminPayment />;
         case 'refund':
-          return <RefundRequest />;
+          return <AdminRefundRequest />;
         case 'fines':
-          return <FinesAdmin />;
+          return <AdminFines />;
         case 'reports':
-          return <Reports />;
+          return <AdminTransactions />;
         default:
-          return <FinanceDashboard />;
+          return <FinanceDashboard setActiveSection={setActiveSection} />;
       }
     } else {
-      // User sections
+      // User sections (now uses former admin components)
       switch (activeSection) {
         case 'dashboard':
           return <UserDashboard setActiveSection={setActiveSection} />;
@@ -58,7 +59,7 @@ const FinancePanel = ({ setCurrentPage }) => {
         case 'fines':
           return <UserFines />;
         case 'reports':
-          return <UserTransactions />;
+          return <UserReports />;
         default:
           return <UserDashboard setActiveSection={setActiveSection} />;
       }
