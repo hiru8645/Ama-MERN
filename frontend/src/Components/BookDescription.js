@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './BookDescription.css';
+import { formatPrice } from '../utils/priceUtils';
 
 const BookDescription = ({ book, goBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -87,7 +88,7 @@ const BookDescription = ({ book, goBack }) => {
             </div>
             <div className="price-section">
               <span className="price-label">Price:</span>
-              <span className="price-value">Rs {book.price?.toLocaleString()}</span>
+              <span className="price-value">{formatPrice(book.price)}</span>
             </div>
             <div className="condition-section">
               <span className="condition-label">Condition:</span>
@@ -163,9 +164,9 @@ const BookDescription = ({ book, goBack }) => {
                       <span className="detail-label">Condition:</span>
                       <span className="detail-value">{book.condition}</span>
                     </div>
-                    <div className="detail-item">
+                    <div className="detail-row">
                       <span className="detail-label">Price:</span>
-                      <span className="detail-value">Rs {book.price?.toLocaleString()}</span>
+                      <span className="detail-value">{formatPrice(book.price)}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Rating:</span>

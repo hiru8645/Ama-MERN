@@ -1,76 +1,53 @@
 import React, { useEffect, useState } from "react";
-import { Wallet, CreditCard, RefreshCcw, FileText, AlertCircle, TrendingUp } from 'lucide-react';
-import { Pie, Doughnut } from 'react-chartjs-2';
+import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
   Legend,
 } from 'chart.js';
-import axios from 'axios';
 import './UserDashboard_New.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 function UserDashboard({ setActiveSection }) {
-  const [wallet, setWallet] = useState(null);
   const [stats, setStats] = useState({
     totalPayments: 0,
     pendingRefunds: 0,
-    totalFines: 0,
     completedTransactions: 0
   });
   const [chartData, setChartData] = useState({
     payments: [],
-    refunds: [],
-    fines: []
+    refunds: []
   });
   const userId = localStorage.getItem("userId") || "IT23650534"; 
 
   useEffect(() => {
-    const fetchWallet = async () => {
-      try {
-        const res = await fetch(`http://localhost:5001/api/wallets/${userId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setWallet(data.wallet);
-        }
-      } catch (err) {
-        console.error(err);
-        setWallet(null);
-      }
-    };
-
     const fetchStats = async () => {
       try {
         // Fetch payments statistics
         const paymentsRes = await fetch(`http://localhost:5001/api/payments/user/${userId}`);
         const refundsRes = await fetch(`http://localhost:5001/api/refunds/user/${userId}`);
-        const finesRes = await fetch(`http://localhost:5001/api/fines/user/${userId}`);
         
         const paymentsData = paymentsRes.ok ? await paymentsRes.json() : { payments: [] };
         const refundsData = refundsRes.ok ? await refundsRes.json() : { refunds: [] };
-        const finesData = finesRes.ok ? await finesRes.json() : { fines: [] };
 
         const payments = paymentsData.payments || [];
         const refunds = refundsData.refunds || [];
-        const fines = finesData.fines || [];
 
         setStats({
           totalPayments: payments.length || 0,
           pendingRefunds: refunds.filter(r => r.status === 'PENDING').length || 0,
-          totalFines: fines.filter(f => f.status === 'PENDING').length || 0,
           completedTransactions: payments.filter(p => p.status === 'APPROVED').length || 0
         });
 
         setChartData({
           payments,
-          refunds,
-          fines
+          refunds
         });
 
         // Add some mock data for demonstration if no real data exists
-        if (payments.length === 0 && refunds.length === 0 && fines.length === 0) {
+        if (payments.length === 0 && refunds.length === 0) {
           setChartData({
             payments: [
               { status: 'APPROVED' },
@@ -82,11 +59,6 @@ function UserDashboard({ setActiveSection }) {
               { status: 'APPROVED' },
               { status: 'PENDING' },
               { status: 'PENDING' }
-            ],
-            fines: [
-              { status: 'PENDING' },
-              { status: 'APPROVED' },
-              { status: 'PENDING' }
             ]
           });
         }
@@ -95,7 +67,6 @@ function UserDashboard({ setActiveSection }) {
       }
     };
 
-    fetchWallet();
     fetchStats();
   }, [userId]);
 
@@ -147,14 +118,6 @@ function UserDashboard({ setActiveSection }) {
   // Dashboard cards
   const cards = [
     { 
-      title: "Wallet Management", 
-      desc: "Manage your wallet balance", 
-      color: "wallet",
-      icon: "💳",
-      section: "wallet",
-      value: wallet ? `Rs. ${wallet.balance || 0}` : "Loading..."
-    },
-    { 
       title: "Payment", 
       desc: "Make or view payments", 
       color: "payment",
@@ -169,22 +132,6 @@ function UserDashboard({ setActiveSection }) {
       icon: "🔄", 
       section: "refund",
       value: `${stats.pendingRefunds} pending`
-    },
-    { 
-      title: "Fines", 
-      desc: "View your fines", 
-      color: "fines",
-      icon: "⚠️", 
-      section: "fines",
-      value: `${stats.totalFines} active`
-    },
-    { 
-      title: "Reports", 
-      desc: "View transaction reports", 
-      color: "reports",
-      icon: "📊", 
-      section: "reports",
-      value: `${stats.completedTransactions} completed`
     }
   ];
 
@@ -226,10 +173,6 @@ function UserDashboard({ setActiveSection }) {
             <div className="stat-label">Pending Refunds</div>
           </div>
           <div className="stat-item">
-            <div className="stat-number">{stats.totalFines}</div>
-            <div className="stat-label">Active Fines</div>
-          </div>
-          <div className="stat-item">
             <div className="stat-number">{stats.completedTransactions}</div>
             <div className="stat-label">Completed</div>
           </div>
@@ -266,41 +209,9 @@ function UserDashboard({ setActiveSection }) {
             )}
           </div>
 
-          <div className="chart-container">
-            <h3>Fines Status</h3>
-            {chartData.fines.length > 0 ? (
-              <div className="chart-wrapper">
-                <Doughnut data={generatePieData(chartData.fines, "Fines")} options={pieOptions} />
-              </div>
-            ) : (
-              <div className="no-data-message">
-                <p>No fines data available</p>
-              </div>
-            )}
-          </div>
+
         </div>
       </div>
-
-      {/* Wallet Info */}
-      {wallet && (
-        <div className="wallet-summary">
-          <h2>💳 Wallet Summary</h2>
-          <div className="wallet-info">
-            <div className="wallet-detail">
-              <span>Balance:</span>
-              <span className="balance">Rs. {wallet.balance || 0}</span>
-            </div>
-            <div className="wallet-detail">
-              <span>Status:</span>
-              <span className="status active">Active</span>
-            </div>
-            <div className="wallet-detail">
-              <span>Last Updated:</span>
-              <span>{new Date(wallet.updatedAt || Date.now()).toLocaleDateString()}</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

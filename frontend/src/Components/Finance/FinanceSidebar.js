@@ -15,9 +15,7 @@ function FinanceSidebar({ activeSection, setActiveSection, isAdmin }) {
   const userSections = [
     { key: 'dashboard', label: 'Dashboard', icon: '📊' },
     { key: 'payment', label: 'Payment', icon: '💳' },
-    { key: 'refund', label: 'Refund Request', icon: '↩️' },
-    { key: 'fines', label: 'Fines', icon: '⚠️' },
-    { key: 'reports', label: 'Transactions', icon: '📈' }
+    { key: 'refund', label: 'Refund Request', icon: '↩️' }
   ];
 
   const sections = isAdmin ? adminSections : userSections;

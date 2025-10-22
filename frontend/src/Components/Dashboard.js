@@ -276,8 +276,8 @@ const Dashboard = ({ setCurrentPage }) => {
                   <td>{item.category}</td>
                   <td>{item.product}</td>
                   <td>{item.quantity}</td>
-                  <td>${typeof item.purchaseRate === 'number' ? item.purchaseRate.toFixed(2) : '0.00'}</td>
-                  <td>${typeof item.salesRate === 'number' ? item.salesRate.toFixed(2) : '0.00'}</td>
+                  <td>Rs. {typeof item.purchaseRate === 'number' ? item.purchaseRate.toFixed(2) : '0.00'}</td>
+                  <td>Rs. {typeof item.salesRate === 'number' ? item.salesRate.toFixed(2) : '0.00'}</td>
                 </tr>
               ))}
             </tbody>

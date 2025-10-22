@@ -23,7 +23,7 @@ import {
 import { useInventory } from '../contexts/InventoryContext';
 import './Alerts.css';
 
-const Alerts = ({ setCurrentPage }) => {
+const Alerts = ({ setCurrentPage, setSidebarActive }) => {
   const { 
     alerts, 
     inventory,
@@ -101,7 +101,7 @@ const Alerts = ({ setCurrentPage }) => {
     };
     
     performInitialRefresh();
-  }, []); // Only run once on mount
+  }, [syncWithProducts]); // Include syncWithProducts dependency
 
   const showNotification = (message) => {
     setNotification(message);
@@ -636,7 +636,7 @@ const Alerts = ({ setCurrentPage }) => {
                         <div className="alert-actions enhanced">
                           <button 
                             className="action-btn restock-btn"
-                            onClick={() => setCurrentPage('products')}
+                            onClick={() => setSidebarActive && setSidebarActive('products')}
                             title="Go to Products"
                           >
                             <FaShoppingCart className="btn-icon" />
@@ -750,7 +750,7 @@ const Alerts = ({ setCurrentPage }) => {
               <button 
                 className="action-btn primary"
                 onClick={() => {
-                  setCurrentPage('products');
+                  setSidebarActive && setSidebarActive('products');
                   setShowDetailModal(false);
                 }}
               >

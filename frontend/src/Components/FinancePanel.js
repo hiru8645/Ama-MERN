@@ -4,19 +4,17 @@ import Header from './Header';
 import FinanceSidebar from './Finance/FinanceSidebar';
 
 // Admin Components (gets management/display functionality)
-import FinanceDashboard from './Finance/User/UserDashboard/UserDashboard';
+import FinanceDashboard from './Finance/Admin/FinanceDashboard/FinanceDashboard';
 import AdminPayment from './Finance/Admin/Payment/Payment';  // Admin gets payment management list
 import AdminRefundRequest from './Finance/Admin/RefundRequest/RefundRequest';  // Admin gets refund management list
 import AdminFines from './Finance/Admin/FinesAdmin/FinesAdmin';  // Admin gets fines management with approve/reject
 import AdminTransactions from './Finance/User/UserTransactions/UserTransactions';
 
 // User Components (gets form functionality)
-import UserDashboard from './Finance/Admin/FinanceDashboard/FinanceDashboard';
+import UserDashboard from './Finance/User/UserDashboard/UserDashboard';
 import UserWalletManagement from './Finance/Admin/Wallet/Wallet';
 import UserPayment from './Finance/User/UserPayment/UserPayment';  // User gets payment form
 import RequestRefund from './Finance/User/RequestRefund/RequestRefund';  // User gets refund form
-import UserFines from './Finance/User/UserFines/UserFines';  // User gets personal fines view
-import UserReports from './Finance/Admin/Reports/Reports';
 
 import './FinancePanel.css';
 
@@ -50,16 +48,10 @@ const FinancePanel = ({ setCurrentPage }) => {
       switch (activeSection) {
         case 'dashboard':
           return <UserDashboard setActiveSection={setActiveSection} />;
-        case 'wallet':
-          return <UserWalletManagement />;
         case 'payment':
           return <UserPayment />;
         case 'refund':
           return <RequestRefund />;
-        case 'fines':
-          return <UserFines />;
-        case 'reports':
-          return <UserReports />;
         default:
           return <UserDashboard setActiveSection={setActiveSection} />;
       }

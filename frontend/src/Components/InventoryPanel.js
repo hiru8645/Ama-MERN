@@ -99,7 +99,7 @@ const InventoryPanel = ({ setCurrentPage }) => {
           />
         );
       case 'alerts':
-        return <Alerts setCurrentPage={setCurrentPage} />;
+        return <Alerts setCurrentPage={setCurrentPage} setSidebarActive={setSidebarActive} />;
       case 'suppliers':
         return <Supplier setCurrentPage={setCurrentPage} />;
       case 'reports':

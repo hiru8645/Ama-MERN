@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Wallet2, CreditCard, RefreshCcw, FileText, Bell, X } from "lucide-react";
+import { Wallet2, CreditCard, RefreshCcw, Bell, X } from "lucide-react";
 import { Bar, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -26,7 +25,6 @@ ChartJS.register(
 );
 
 function FinanceDashboard({ setActiveSection }) {
-  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [wallets, setWallets] = useState([]);
@@ -196,19 +194,7 @@ function FinanceDashboard({ setActiveSection }) {
           <div className="dashboard-card refund" onClick={() => setActiveSection && setActiveSection("refund")}>
             <RefreshCcw size={28} />
             <h3>Refund Requests</h3>
-            <p>Monitor and process refund requests.</p>
-          </div>
-
-          <div className="dashboard-card fines" onClick={() => setActiveSection && setActiveSection("fines")}>
-            <FileText size={28} />
-            <h3>Fines Management</h3>
-            <p>Track fines and overdue payments.</p>
-          </div>
-
-          <div className="dashboard-card reports" onClick={() => setActiveSection && setActiveSection("reports")}>
-            <FileText size={28} />
-            <h3>Reports</h3>
-            <p>Generate finance reports for any day.</p>
+            <p>Submit and track your refund requests.</p>
           </div>
         </div>
 

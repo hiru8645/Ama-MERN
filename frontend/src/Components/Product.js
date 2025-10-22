@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./Product.css";
 import Header from "./Header";
 import { useInventory } from '../contexts/InventoryContext';
+import { formatPrice, cleanPriceForDB, isValidPrice } from '../utils/priceUtils';
 import {
   FaBook,
   FaPencilAlt,
@@ -14,6 +15,20 @@ import {
 
 // Backend CRUD API base URL
 const API_URL = "http://localhost:5001/api/products";
+
+// Utility function to automatically determine book status based on stock levels
+const determineBookStatus = (currentStock, totalStock) => {
+  const stockCurrent = parseInt(currentStock) || 0;
+  const stockTotal = parseInt(totalStock) || 0;
+  
+  if (stockCurrent === 0) {
+    return "OUT OF STOCK";
+  } else if (stockCurrent < Math.max(5, stockTotal * 0.2)) { // Less than 20% of total stock or less than 5
+    return "LOW STOCK";
+  } else {
+    return "IN STOCK";
+  }
+};
 
 
 const Product = ({ setCurrentPage }) => {
@@ -41,7 +56,6 @@ const Product = ({ setCurrentPage }) => {
     supplierEmail: "",
     supplierPhone: "",
     supplierAddress: "",
-    supplierBooks: "",
   });
 
   // Fetch all products from backend
@@ -54,24 +68,31 @@ const Product = ({ setCurrentPage }) => {
         }
         
         const data = await response.json();
-        // Add icon and color fields for UI
+        // Add icon and color fields for UI, and auto-generate status if needed
         setProducts(
-          data.map((p) => ({
-            ...p,
-            icon: <FaBook />,
-            stockColor:
-              p.stockCurrent / p.stockTotal > 0.5
-                ? "#3b82f6"
-                : p.stockCurrent > 0
-                ? "#f59e0b"
-                : "#6b7280",
-            statusColor:
-              p.status === "IN STOCK"
-                ? "#22c55e"
-                : p.status === "LOW STOCK"
-                ? "#f59e0b"
-                : "#ef4444",
-          }))
+          data.map((p) => {
+            // Auto-generate status if it's missing or empty
+            const autoStatus = determineBookStatus(p.stockCurrent, p.stockTotal);
+            const finalStatus = p.status && p.status.trim() !== '' ? p.status : autoStatus;
+            
+            return {
+              ...p,
+              status: finalStatus, // Ensure status is properly set
+              icon: <FaBook />,
+              stockColor:
+                p.stockCurrent / p.stockTotal > 0.5
+                  ? "#3b82f6"
+                  : p.stockCurrent > 0
+                  ? "#f59e0b"
+                  : "#6b7280",
+              statusColor:
+                finalStatus === "IN STOCK"
+                  ? "#22c55e"
+                  : finalStatus === "LOW STOCK"
+                  ? "#f59e0b"
+                  : "#ef4444",
+            };
+          })
         );
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -152,18 +173,38 @@ const Product = ({ setCurrentPage }) => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setNewProduct({ ...newProduct, [name]: value });
+    
+    // For price field, allow only numbers, decimals, and Rs prefix
+    if (name === 'price') {
+      // Allow numbers, decimal point, and Rs prefix
+      const filteredValue = value.replace(/[^0-9.Rs\s]/g, '');
+      setNewProduct({ ...newProduct, [name]: filteredValue });
+    } else {
+      const updatedProduct = { ...newProduct, [name]: value };
+      
+      // Auto-generate status when stock values change
+      if (name === 'stockCurrent' || name === 'stockTotal') {
+        const currentStock = name === 'stockCurrent' ? value : newProduct.stockCurrent;
+        const totalStock = name === 'stockTotal' ? value : newProduct.stockTotal;
+        
+        if (currentStock !== "" && totalStock !== "") {
+          updatedProduct.status = determineBookStatus(currentStock, totalStock);
+        }
+      }
+      
+      setNewProduct(updatedProduct);
+    }
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     
-    // Form validation
+    // Form validation (status is now auto-generated)
     if (!newProduct.name || !newProduct.code || !newProduct.category || 
         !newProduct.price || !newProduct.stockCurrent || !newProduct.stockTotal || 
-        !newProduct.status || !newProduct.supplier || 
+        !newProduct.supplier || 
         !newProduct.supplierContact || !newProduct.supplierEmail || !newProduct.supplierPhone || 
-        !newProduct.supplierAddress || !newProduct.supplierBooks) {
+        !newProduct.supplierAddress) {
       alert("All product and supplier fields are required!");
       return;
     }
@@ -182,31 +223,31 @@ const Product = ({ setCurrentPage }) => {
       return;
     }
 
-    // Validate price format
-    const priceRegex = /^Rs\.?\d+(\.\d{2})?$/;
-    if (!priceRegex.test(newProduct.price.replace(/[,Rs\.]/g, ''))) {
-      alert("Please enter a valid price format (e.g., Rs.49.99 or 49.99)!");
+    // Validate price format using utility function
+    if (!isValidPrice(newProduct.price)) {
+      alert("Please enter a valid price (numbers only)!");
       return;
     }
 
     // Validate phone number format (Sri Lankan phone numbers)
     const phoneRegex = /^(\+94|0)?[1-9]\d{8}$/;
-    if (!phoneRegex.test(newProduct.supplierPhone.replace(/[\s\-\(\)]/g, ''))) {
+    if (!phoneRegex.test(newProduct.supplierPhone.replace(/[\s\-()]/g, ''))) {
       alert("Please enter a valid Sri Lankan phone number (e.g., +94771234567, 0771234567, or 771234567)!");
       return;
     }
 
-    const statusText = newProduct.status.toUpperCase();
+    // Auto-generate status based on stock levels
+    const autoStatus = determineBookStatus(stockCurrent, stockTotal);
     
     // Prepare product payload (excluding supplier detail fields)
     const productPayload = {
       name: newProduct.name,
       code: newProduct.code,
       category: newProduct.category,
-      price: newProduct.price,
+      price: cleanPriceForDB(newProduct.price),
       stockCurrent,
       stockTotal,
-      status: statusText,
+      status: autoStatus,
       supplier: newProduct.supplier,
       lastUpdated: new Date().toLocaleString(),
     };
@@ -218,7 +259,7 @@ const Product = ({ setCurrentPage }) => {
       email: newProduct.supplierEmail,
       phone: newProduct.supplierPhone,
       address: newProduct.supplierAddress,
-      books: newProduct.supplierBooks,
+      books: newProduct.name, // Use the book name from the product being added
       lastUpdated: new Date().toISOString().slice(0, 10),
     };
     
@@ -302,7 +343,6 @@ const Product = ({ setCurrentPage }) => {
         supplierEmail: "",
         supplierPhone: "",
         supplierAddress: "",
-        supplierBooks: "",
       });
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -326,7 +366,6 @@ const Product = ({ setCurrentPage }) => {
       supplierEmail: "",
       supplierPhone: "",
       supplierAddress: "",
-      supplierBooks: "",
     });
   };
 
@@ -340,7 +379,7 @@ const Product = ({ setCurrentPage }) => {
       name: product.name,
       code: product.code,
       category: product.category,
-      price: product.price,
+      price: formatPrice(product.price),
       stockCurrent: product.stockCurrent,
       stockTotal: product.stockTotal,
       status: product.status,
@@ -350,7 +389,6 @@ const Product = ({ setCurrentPage }) => {
       supplierEmail: "",
       supplierPhone: "",
       supplierAddress: "",
-      supplierBooks: "",
     });
     setShowForm(true);
   };
@@ -528,7 +566,7 @@ const Product = ({ setCurrentPage }) => {
             </div>
 
             <div className="table-cell">
-              <span className="price">{product.price}</span>
+              <span className="price">{formatPrice(product.price)}</span>
             </div>
 
             <div className="table-cell">
@@ -642,12 +680,12 @@ const Product = ({ setCurrentPage }) => {
                   <label className="form-label">Price</label>
                   <input
                     name="price"
-                    placeholder="e.g., Rs.49.99"
+                    placeholder="e.g., 49.99 or Rs.49.99"
                     value={newProduct.price}
                     onChange={handleFormChange}
                     className="form-input"
-                    pattern="^Rs\.?\d+(\.\d{2})?$"
-                    title="Please enter a valid price format (e.g., Rs.49.99 or 49.99)"
+                    type="text"
+                    title="Please enter a valid price (numbers only)"
                     required
                   />
                 </div>
@@ -681,19 +719,20 @@ const Product = ({ setCurrentPage }) => {
                 </div>
                 
                 <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select
-                    name="status"
-                    value={newProduct.status}
-                    onChange={handleFormChange}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">Select Status</option>
-                    {statuses.filter(s => s !== "All Status").map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <label className="form-label">Status (Auto-Generated)</label>
+                  <div className="status-display">
+                    <span className={`status-badge ${
+                      newProduct.status === 'IN STOCK' ? 'status-available' :
+                      newProduct.status === 'LOW STOCK' ? 'status-low' :
+                      newProduct.status === 'OUT OF STOCK' ? 'status-out' :
+                      'status-pending'
+                    }`}>
+                      {newProduct.status || 'Enter stock values to see status'}
+                    </span>
+                  </div>
+                  <small className="form-hint">
+                    Status is automatically determined based on stock levels
+                  </small>
                 </div>
                 
                 <div className="form-group">
@@ -762,18 +801,6 @@ const Product = ({ setCurrentPage }) => {
                       name="supplierAddress"
                       placeholder="Enter address"
                       value={newProduct.supplierAddress}
-                      onChange={handleFormChange}
-                      className="form-input"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label className="form-label">Books Supplied *</label>
-                    <input
-                      name="supplierBooks"
-                      placeholder="Enter books supplied"
-                      value={newProduct.supplierBooks}
                       onChange={handleFormChange}
                       className="form-input"
                       required
