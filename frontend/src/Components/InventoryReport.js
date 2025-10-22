@@ -100,7 +100,6 @@ const InventoryReport = () => {
 
   // Helper functions for calculations
   const { products, suppliers, orders } = reportData;
-  const borrowReturns = []; // Mock data for now
 
   const showNotification = (message, type = "info") => {
     setNotification({ message, type });
@@ -112,13 +111,16 @@ const InventoryReport = () => {
   };
 
   const getStockDistributionData = () => {
-    const availableBooks = products.reduce((sum, p) => sum + (p.stockCurrent || 0), 0);
-    const totalBooks = products.reduce((sum, p) => sum + (p.stockTotal || 0), 0);
-    const borrowedBooks = totalBooks - availableBooks;
+    // Get available counts for the two specific book types
+    const dataStructuresBook = products.find(p => p.name && p.name.toLowerCase().includes('data structures'));
+    const agileDevBook = products.find(p => p.name && p.name.toLowerCase().includes('agile development'));
+    
+    const dataStructuresAvailable = dataStructuresBook ? (dataStructuresBook.stockCurrent || 0) : 0;
+    const agileDevAvailable = agileDevBook ? (agileDevBook.stockCurrent || 0) : 0;
 
     return [
-      { name: 'Available', value: availableBooks, color: '#3498db' },
-      { name: 'Borrowed', value: borrowedBooks, color: '#e74c3c' }
+      { name: 'Data Structures', value: dataStructuresAvailable, color: '#3498db' },
+      { name: 'Agile Development', value: agileDevAvailable, color: '#2ecc71' }
     ];
   };
 
@@ -135,21 +137,29 @@ const InventoryReport = () => {
     }));
   };
 
-  // PDF Generation Function - Clean Implementation
+  // PDF Generation Function - Restructured Layout
   const generatePDFReport = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Calculate stats first
-    const stats = {
-      totalBooksInSystem: products.reduce((sum, product) => sum + (product.stockTotal || 0), 0),
-      availableBooks: products.reduce((sum, product) => sum + (product.stockCurrent || 0), 0),
-      borrowedBooks: borrowReturns.filter(b => b.status === 'borrowed').length || 2
+    // Calculate stats first (same as web interface)
+    const currentBorrowedBooks = borrowedBooks.filter(b => !returnedBooks.find(r => r.id === b.id)).length;
+    const pdfStats = {
+      totalBooksInSystem: products.reduce((sum, p) => sum + (p.stockTotal || 0), 0),
+      availableBooks: products.reduce((sum, p) => sum + (p.stockCurrent || 0), 0),
+      totalBorrowed: borrowedBooks.length,
+      totalReturned: returnedBooks.length,
+      currentlyBorrowed: currentBorrowedBooks,
+      overdueBooks: borrowedBooks.filter(book => {
+        const borrowDate = new Date(book.borrowDate);
+        const dueDate = new Date(borrowDate.getTime() + (book.borrowDays * 24 * 60 * 60 * 1000));
+        return new Date() > dueDate && !returnedBooks.find(r => r.id === book.id);
+      }).length,
+      lowStockCount: getLowStockBooks().length
     };
 
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
     const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
     
-    // ===== PAGE 1: DATA TABLES =====
+    // ===== PAGE 1: SECTIONS A, B, C =====
     // Title
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
@@ -159,313 +169,213 @@ const InventoryReport = () => {
     doc.setFontSize(12);
     doc.text(reportDate, pageWidth / 2, 30, { align: "center" });
     
-    // A. Book Summary
-    doc.setFontSize(12);
+    // A. Book Summary (Table)
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("A. Book Summary", 15, 45);
+    doc.text("A. Book Summary", 15, 50);
+    
+    // Table headers
+    const tableStartY = 65;
+    const rowHeight = 12;
+    const colPositions = [15, 40, 110, 135, 160];
+    
+    // Header row
+    doc.setFillColor(52, 152, 219);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(15, tableStartY - 8, 175, rowHeight, 'F');
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Book ID", colPositions[0] + 2, tableStartY - 2);
+    doc.text("Title", colPositions[1] + 2, tableStartY - 2);
+    doc.text("Available", colPositions[2] + 2, tableStartY - 2);
+    doc.text("Total", colPositions[3] + 2, tableStartY - 2);
+    doc.text("Status", colPositions[4] + 2, tableStartY - 2);
+    
+    // Table data rows
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    
+    const topBooks = products.slice(0, 5);
+    topBooks.forEach((product, index) => {
+      const y = tableStartY + 4 + (index * rowHeight);
+      const bookId = product.code || `B00${index + 1}`;
+      const available = product.stockCurrent || 0;
+      const total = product.stockTotal || 0;
+      
+      // Status calculation
+      let status;
+      if (available === 0) {
+        status = "Out of Stock";
+      } else if (available <= 3) {
+        status = "Low Stock";
+      } else {
+        status = "Available";
+      }
+      
+      // Alternate row colors
+      if (index % 2 === 0) {
+        doc.setFillColor(248, 249, 250);
+        doc.rect(15, y - 6, 175, rowHeight, 'F');
+      }
+      
+      // Table data
+      doc.text(bookId, colPositions[0] + 2, y);
+      doc.text(product.name?.substring(0, 25) || "N/A", colPositions[1] + 2, y);
+      doc.text(available.toString(), colPositions[2] + 2, y);
+      doc.text(total.toString(), colPositions[3] + 2, y);
+      doc.text(status, colPositions[4] + 2, y);
+    });
     
     // Table border
-    doc.setDrawColor(0, 0, 0);
+    doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
-    doc.rect(10, 50, 180, 40);
-    
-    // Table headers with background
-    doc.setFillColor(240, 240, 240);
-    doc.rect(10, 50, 180, 8, 'F');
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("Book ID", 15, 56);
-    doc.text("Title", 45, 56);
-    doc.text("Available", 105, 56);
-    doc.text("Borrowed", 135, 56);
-    doc.text("Status", 165, 56);
-    
-    // Header bottom line
-    doc.line(10, 58, 190, 58);
-    
-    // Vertical lines
-    doc.line(40, 50, 40, 90);
-    doc.line(100, 50, 100, 90);
-    doc.line(130, 50, 130, 90);
-    doc.line(160, 50, 160, 90);
-    
-    // Table data - top 4 products
-    doc.setFont("helvetica", "normal");
-    const topBooks = products.slice(0, 4);
-    topBooks.forEach((product, index) => {
-      const y = 66 + (index * 8);
-      const bookId = `B00${index + 1}`;
-      const available = product.stockCurrent || 0;
-      const borrowed = (product.stockTotal || 0) - available;
-      const status = available > 10 ? "Available" : available > 5 ? "Low Stock" : "Out of Stock";
-      
-      doc.text(bookId, 15, y);
-      doc.text(product.name?.substring(0, 18) || "N/A", 45, y);
-      doc.text(available.toString(), 110, y);
-      doc.text(borrowed.toString(), 140, y);
-      doc.text(status, 165, y);
-      
-      if (index < topBooks.length - 1) {
-        doc.line(10, y + 2, 190, y + 2);
-      }
-    });
+    doc.rect(15, tableStartY - 8, 175, rowHeight * (topBooks.length + 1));
     
     // B. Borrow/Return Overview
-    doc.setFontSize(12);
+    const sectionBY = 150;
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("B. Borrow/Return Overview", 15, 110);
+    doc.text("B. Borrow/Return Overview", 15, sectionBY);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const borrowedCount = borrowReturns.filter(b => b.status === 'borrowed').length;
-    const returnedCount = borrowReturns.filter(b => b.status === 'returned').length;
-    const overdueCount = borrowReturns.filter(b => b.status === 'overdue').length;
+    doc.text(`• Total Books Borrowed: ${pdfStats.totalBorrowed}`, 20, sectionBY + 15);
+    doc.text(`• Total Books Returned: ${pdfStats.totalReturned}`, 20, sectionBY + 25);
+    doc.text(`• Currently Borrowed: ${pdfStats.currentlyBorrowed}`, 20, sectionBY + 35);
+    doc.text(`• Overdue Books: ${pdfStats.overdueBooks}`, 20, sectionBY + 45);
     
-    doc.text(`Total Books Borrowed: ${borrowedCount}`, 15, 125);
-    doc.text(`Total Books Returned: ${returnedCount}`, 15, 135);
-    doc.text(`Currently Borrowed: ${borrowedCount}`, 15, 145);
-    doc.text(`Overdue Books: ${overdueCount}`, 15, 155);
-    
-    // C. Low Stock Books
-    doc.setFontSize(12);
+    // C. Low Stock Alert
+    const sectionCY = 210;
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("C. Low Stock Books", 15, 175);
+    doc.text("C. Low Stock Alert", 15, sectionCY);
     
-    const lowStockItems = getLowStockBooks().slice(0, 2);
+    const lowStockItems = getLowStockBooks().slice(0, 4);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    lowStockItems.forEach((book, index) => {
-      doc.text(`${book.name?.substring(0, 30) || "N/A"}: ${book.stockCurrent || 0}`, 15, 185 + (index * 10));
-    });
-    
-    // D. Notifications
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("D. Notifications Sent", 15, 215);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Overdue reminders sent: 2`, 15, 225);
-    
-    // E. Summary Table
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("E. Summary", 15, 245);
-    
-    // Summary table border
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.rect(10, 250, 180, 40);
-    
-    // Table headers with background
-    doc.setFillColor(240, 240, 240);
-    doc.rect(10, 250, 180, 8, 'F');
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("Metric", 15, 256);
-    doc.text("Count", 150, 256);
-    
-    // Header line
-    doc.line(10, 258, 190, 258);
-    doc.line(140, 250, 140, 290);
-    
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total Books in System`, 15, 266);
-    doc.text(`${stats.totalBooksInSystem}`, 155, 266);
-    doc.line(10, 268, 190, 268);
-    
-    doc.text(`Available Books`, 15, 276);
-    doc.text(`${stats.availableBooks}`, 155, 276);
-    doc.line(10, 278, 190, 278);
-    
-    doc.text(`Borrowed Books`, 15, 286);
-    doc.text(`${stats.borrowedBooks}`, 155, 286);
+    if (lowStockItems.length > 0) {
+      lowStockItems.forEach((book, index) => {
+        doc.text(`• ${book.name?.substring(0, 40) || "N/A"} - Stock: ${book.stockCurrent || 0}`, 20, sectionCY + 15 + (index * 10));
+      });
+    } else {
+      doc.text("✓ All books have adequate stock levels", 20, sectionCY + 15);
+    }
     
     // Page 1 Footer
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 100, 100);
-    doc.text("Page 1 of 2", pageWidth / 2, 300, { align: "center" });
-    doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 308, { align: "center" });
+    doc.text("Page 1 of 2", pageWidth / 2, 280, { align: "center" });
+    doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 288, { align: "center" });
     
-    // ===== PAGE 2: CHARTS AND ANALYTICS =====
+    // ===== PAGE 2: SECTIONS D, E =====
     doc.addPage();
     doc.setTextColor(0, 0, 0);
     
     // Page 2 Header
-    doc.setFontSize(16);
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("INVENTORY ANALYTICS & CHARTS", pageWidth / 2, 20, { align: "center" });
+    doc.text("INVENTORY ANALYTICS", pageWidth / 2, 20, { align: "center" });
     
     doc.setFontSize(12);
     doc.text(reportDate, pageWidth / 2, 30, { align: "center" });
     
-    // Decorative line
-    doc.setDrawColor(52, 152, 219);
-    doc.setLineWidth(1);
-    doc.line(50, 35, pageWidth - 50, 35);
-    
-    const chartsStartY = 50;
-    
-    // Page 2 Content Organization
+    // D. Visual Analytics
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("VISUAL ANALYTICS DASHBOARD", 15, chartsStartY);
+    doc.text("D. Visual Analytics", 15, 50);
     
-    // Section divider
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.line(15, chartsStartY + 5, pageWidth - 15, chartsStartY + 5);
-    
-    // Section 1: Stock Distribution Analysis
-    doc.setFontSize(12);
+    // Book Types Distribution (Numbers Only)
     doc.setFont("helvetica", "bold");
-    doc.text("1. STOCK DISTRIBUTION ANALYSIS", 15, chartsStartY + 20);
+    doc.setFontSize(12);
+    doc.text("Book Types Distribution", 20, 75);
     
-    // Clean Stock Distribution Chart
-    const chartX = 40;
-    const chartY = chartsStartY + 50;
-    const chartRadius = 20;
+    // Get available counts for the two specific book types
+    const dataStructuresBook = products.find(p => p.name && p.name.toLowerCase().includes('data structures'));
+    const agileDevBook = products.find(p => p.name && p.name.toLowerCase().includes('agile development'));
     
-    const availableBooks = stats.availableBooks || 0;
-    const borrowedBooks = stats.borrowedBooks || 0;
-    const totalBooks = availableBooks + borrowedBooks;
+    const dataStructuresCount = dataStructuresBook ? (dataStructuresBook.stockCurrent || 0) : 0;
+    const agileDevCount = agileDevBook ? (agileDevBook.stockCurrent || 0) : 0;
+    const totalBooksShown = dataStructuresCount + agileDevCount;
     
-    if (totalBooks > 0) {
-      const availablePercentage = (availableBooks / totalBooks) * 100;
-      const borrowedPercentage = (borrowedBooks / totalBooks) * 100;
-      
-      // Main chart circle
-      doc.setDrawColor(150, 150, 150);
-      doc.setFillColor(240, 240, 240);
-      doc.setLineWidth(1);
-      doc.circle(chartX, chartY, chartRadius, 'FD');
-      
-      // Available books (larger blue circle)
-      doc.setFillColor(52, 152, 219);
-      doc.circle(chartX, chartY, chartRadius - 2, 'F');
-      
-      // Borrowed books (smaller red circle overlay)
-      if (borrowedBooks > 0) {
-        const borrowedSize = Math.max(5, (borrowedPercentage / 100) * chartRadius);
-        doc.setFillColor(231, 76, 60);
-        doc.circle(chartX + 6, chartY - 6, borrowedSize, 'F');
-      }
-      
-      // Center percentage label
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
-      doc.text(`${availablePercentage.toFixed(0)}%`, chartX - 6, chartY + 2);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(8);
-      doc.text(`Available`, chartX - 12, chartY + 15);
-      
-      // Legend
-      const legendX = 80;
-      const legendY = chartY - 15;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(52, 152, 219);
-      doc.text(`● Available Books: ${availableBooks} (${availablePercentage.toFixed(1)}%)`, legendX, legendY);
-      
-      doc.setTextColor(231, 76, 60);
-      doc.text(`● Borrowed Books: ${borrowedBooks} (${borrowedPercentage.toFixed(1)}%)`, legendX, legendY + 12);
-      
-      // Insights
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Total Books in Circulation: ${totalBooks}`, legendX, legendY + 28);
-      const utilizationRate = (borrowedBooks / totalBooks * 100).toFixed(1);
-      doc.text(`Library Utilization Rate: ${utilizationRate}%`, legendX, legendY + 40);
-      
-      doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`• Data Structures Available: ${dataStructuresCount} books`, 25, 90);
+    doc.text(`• Agile Development Available: ${agileDevCount} books`, 25, 100);
+    if (totalBooksShown > 0) {
+      const dsPercentage = ((dataStructuresCount / totalBooksShown) * 100).toFixed(1);
+      const agilePercentage = ((agileDevCount / totalBooksShown) * 100).toFixed(1);
+      doc.text(`• Data Structures: ${dsPercentage}% of available books`, 25, 110);
+      doc.text(`• Agile Development: ${agilePercentage}% of available books`, 25, 120);
     }
     
-    // Section 2: Inventory Status & Alerts (moved up from section 3)
-    const alertsStartY = chartsStartY + 120;
-    
-    doc.setFontSize(12);
+    // Category Distribution (Numbers Only)
     doc.setFont("helvetica", "bold");
-    doc.text("2. INVENTORY STATUS & ALERTS", 15, alertsStartY);
+    doc.setFontSize(12);
+    doc.text("Category Distribution", 20, 145);
     
-    const lowStockAlert = getLowStockBooks();
-    const lowStockCount = lowStockAlert.length;
+    const categoryData = getCategoryDistributionData().slice(0, 3);
+    const totalCategoryBooks = categoryData.reduce((sum, cat) => sum + cat.totalBooks, 0);
     
-    // Dashboard container
-    doc.setDrawColor(200, 200, 200);
-    doc.setFillColor(247, 248, 249);
-    doc.setLineWidth(0.5);
-    doc.rect(15, alertsStartY + 15, 175, 50, 'FD');
-    
-    const alertBoxX = 25;
-    const alertBoxY = alertsStartY + 25;
-    
-    // Alert status box
-    if (lowStockCount > 0) {
-      // Red alert
-      doc.setDrawColor(231, 76, 60);
-      doc.setFillColor(255, 240, 240);
-      doc.setLineWidth(1.5);
-      doc.rect(alertBoxX, alertBoxY, 75, 30, 'FD');
-      
-      // Alert circle
-      doc.setFillColor(231, 76, 60);
-      doc.circle(alertBoxX + 15, alertBoxY + 15, 8, 'F');
-      
-      // Count
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(255, 255, 255);
-      doc.text(lowStockCount.toString(), alertBoxX + (lowStockCount > 9 ? 11 : 13), alertBoxY + 18);
-      
-      // Alert text
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(231, 76, 60);
-      doc.text("Low Stock Alert", alertBoxX + 27, alertBoxY + 10);
-      doc.setFontSize(7);
-      doc.text("Items need restocking", alertBoxX + 27, alertBoxY + 20);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    if (categoryData.length > 0) {
+      categoryData.forEach((cat, index) => {
+        const percentage = totalCategoryBooks > 0 ? ((cat.totalBooks / totalCategoryBooks) * 100).toFixed(1) : 0;
+        doc.text(`• ${cat.name}: ${cat.totalBooks} books (${percentage}%)`, 25, 160 + (index * 10));
+      });
     } else {
-      // Green status
-      doc.setDrawColor(46, 204, 113);
-      doc.setFillColor(240, 255, 240);
-      doc.setLineWidth(1.5);
-      doc.rect(alertBoxX, alertBoxY, 75, 30, 'FD');
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(46, 204, 113);
-      doc.text("Stock Levels OK", alertBoxX + 5, alertBoxY + 18);
+      doc.text("• No category data available", 25, 160);
     }
     
-    // Quick stats box
-    const statsBoxX = 110;
+    // Summary statistics with book type breakdown
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    const totalSystemBooks = pdfStats.totalBooksInSystem;
+    doc.text(`Total Books in System: ${totalSystemBooks} | Data Structures: ${dataStructuresCount} | Agile Development: ${agileDevCount}`, 20, 140);
+    
+    // E. System Information
+    const sectionEY = 170;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("E. System Information", 15, sectionEY);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`• Total Products in System: ${products.length}`, 20, sectionEY + 15);
+    doc.text(`• Total Orders Processed: ${orders.length}`, 20, sectionEY + 25);
+    doc.text(`• Total Suppliers: ${suppliers.length}`, 20, sectionEY + 35);
+    doc.text(`• Report Generated: ${new Date().toLocaleString()}`, 20, sectionEY + 45);
+    doc.text(`• Auto-Refresh: Every 30 seconds`, 20, sectionEY + 55);
+    doc.text(`• Last Updated: ${lastUpdated.toLocaleString()}`, 20, sectionEY + 65);
+    
+    // System Summary Box
     doc.setDrawColor(52, 152, 219);
     doc.setFillColor(240, 248, 255);
-    doc.rect(statsBoxX, alertBoxY, 70, 30, 'FD');
+    doc.setLineWidth(1);
+    doc.rect(15, sectionEY + 75, 170, 35, 'FD');
     
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(52, 152, 219);
-    doc.text("Quick Statistics", statsBoxX + 5, alertBoxY + 10);
+    doc.text("System Status Summary", 20, sectionEY + 85);
     
-    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Total Products: ${products.length}`, statsBoxX + 5, alertBoxY + 19);
-    doc.text(`Total Suppliers: ${suppliers.length}`, statsBoxX + 5, alertBoxY + 26);
+    const systemHealth = lowStockItems.length === 0 ? "Excellent" : lowStockItems.length <= 2 ? "Good" : "Needs Attention";
+    doc.text(`• System Health: ${systemHealth}`, 20, sectionEY + 95);
+    doc.text(`• Low Stock Items: ${getLowStockBooks().length}`, 20, sectionEY + 103);
     
     // Page 2 Footer
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 100, 100);
-    doc.text("Page 2 of 2", pageWidth / 2, alertsStartY + 100, { align: "center" });
-    doc.text("End of Report - Generated by Inventory Management System", pageWidth / 2, alertsStartY + 110, { align: "center" });
+    doc.text("Page 2 of 2", pageWidth / 2, 270, { align: "center" });
+    doc.text("End of Report - Generated by Inventory Management System", pageWidth / 2, 280, { align: "center" });
     
     doc.setTextColor(0, 0, 0);
     
@@ -494,6 +404,16 @@ const InventoryReport = () => {
   // Get borrow/return data from localStorage  
   const borrowedBooks = JSON.parse(localStorage.getItem('borrowedBooks') || '[]');
   const returnedBooks = JSON.parse(localStorage.getItem('returnedBooks') || '[]');
+
+  // Helper function to get accurate status based on actual data
+  const getBookStatus = (product) => {
+    const available = product.stockCurrent || 0;
+    
+    if (available === 0) return { status: "Out of Stock", class: "status-danger" };
+    if (available <= 3) return { status: "Critical Stock", class: "status-danger" };
+    if (available <= 5) return { status: "Low Stock", class: "status-warning" };
+    return { status: "In Stock", class: "status-good" };
+  };
   
   // Calculate comprehensive stats
   const reportStats = {
@@ -544,19 +464,16 @@ const InventoryReport = () => {
                 <th>Title</th>
                 <th>Category</th>
                 <th>Available</th>
-                <th>Borrowed</th>
                 <th>Total Stock</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {products.slice(0, 10).map((product, index) => {
-                const bookId = `B00${index + 1}`;
+                const bookId = product.code || `B00${index + 1}`;
                 const available = product.stockCurrent || 0;
                 const total = product.stockTotal || 0;
-                const borrowed = total - available;
-                const status = available > 10 ? "In Stock" : available > 5 ? "Low Stock" : "Out of Stock";
-                const statusClass = available > 10 ? "status-good" : available > 5 ? "status-warning" : "status-danger";
+                const { status, class: statusClass } = getBookStatus(product);
 
                 return (
                   <tr key={product._id || index}>
@@ -564,7 +481,6 @@ const InventoryReport = () => {
                     <td>{product.name || "N/A"}</td>
                     <td>{product.category || "General"}</td>
                     <td>{available}</td>
-                    <td>{borrowed}</td>
                     <td>{total}</td>
                     <td><span className={`status-badge ${statusClass}`}>{status}</span></td>
                   </tr>
@@ -630,7 +546,7 @@ const InventoryReport = () => {
         <h3>📊 D. Visual Analytics</h3>
         <div className="charts-container">
           <div className="chart-card">
-            <h4>Stock Distribution</h4>
+            <h4>Book Types Distribution</h4>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -667,40 +583,11 @@ const InventoryReport = () => {
         </div>
       </div>
 
-      {/* E. Summary Statistics */}
-      <div className="report-section">
-        <h3>📋 E. Summary Statistics</h3>
-        <div className="summary-grid">
-          <div className="summary-card">
-            <div className="summary-title">Total Books in System</div>
-            <div className="summary-value">{reportStats.totalBooksInSystem}</div>
-          </div>
-          <div className="summary-card">
-            <div className="summary-title">Available Books</div>
-            <div className="summary-value">{reportStats.availableBooks}</div>
-          </div>
-          <div className="summary-card">
-            <div className="summary-title">Books in Circulation</div>
-            <div className="summary-value">{reportStats.currentlyBorrowed}</div>
-          </div>
-          <div className="summary-card">
-            <div className="summary-title">Total Categories</div>
-            <div className="summary-value">{getCategoryDistributionData().length}</div>
-          </div>
-          <div className="summary-card">
-            <div className="summary-title">Total Suppliers</div>
-            <div className="summary-value">{suppliers.length}</div>
-          </div>
-          <div className="summary-card">
-            <div className="summary-title">Low Stock Items</div>
-            <div className="summary-value">{reportStats.lowStockCount}</div>
-          </div>
-        </div>
-      </div>
+      {/* ...E. Summary Statistics section removed... */}
 
-      {/* F. System Information */}
+      {/* E. System Information */}
       <div className="report-section">
-        <h3>🔧 F. System Information</h3>
+        <h3>🔧 E. System Information</h3>
         <div className="system-info">
           <div className="info-row">
             <span className="info-label">Total Products:</span>

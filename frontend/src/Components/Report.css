@@ -149,6 +149,11 @@
   color: #721c24;
 }
 
+.inventory-report-container .status-info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
 /* Overview Stats Grid */
 .inventory-report-container .overview-grid {
   display: grid;
@@ -270,39 +275,7 @@
   text-align: center;
 }
 
-/* Summary Grid */
-.inventory-report-container .summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.inventory-report-container .summary-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  border-left: 4px solid #3498db;
-  transition: transform 0.3s ease;
-}
-
-.inventory-report-container .summary-card:hover {
-  transform: translateY(-3px);
-}
-
-.inventory-report-container .summary-title {
-  font-size: 13px;
-  color: #7f8c8d;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.inventory-report-container .summary-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2c3e50;
-}
+/* ...summary-grid and summary-card styles removed (E section deleted)... */
 
 /* System Information */
 .inventory-report-container .system-info {

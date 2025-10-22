@@ -458,7 +458,7 @@
 
 .section-subtitle {
   font-size: 1.125rem;
-  color: #E8F0FE;
+  color: #3460ac;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -588,11 +588,12 @@
 .book-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #fff;
   margin-bottom: 0.5rem;
   line-height: 1.3;
   text-align: center;
   width: 100%;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 0 2px #0002;
 }
 
 .book-rating {
