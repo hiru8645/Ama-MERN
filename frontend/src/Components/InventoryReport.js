@@ -111,17 +111,41 @@ const InventoryReport = () => {
   };
 
   const getStockDistributionData = () => {
-    // Get available counts for the two specific book types
-    const dataStructuresBook = products.find(p => p.name && p.name.toLowerCase().includes('data structures'));
-    const agileDevBook = products.find(p => p.name && p.name.toLowerCase().includes('agile development'));
+    // Dynamic book distribution based on all available products
+    const bookDistribution = {};
+    const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
     
-    const dataStructuresAvailable = dataStructuresBook ? (dataStructuresBook.stockCurrent || 0) : 0;
-    const agileDevAvailable = agileDevBook ? (agileDevBook.stockCurrent || 0) : 0;
+    // Group books by their names and sum available quantities
+    products.forEach(product => {
+      if (product.name && (product.stockCurrent || 0) > 0) {
+        const bookName = product.name.trim();
+        if (bookDistribution[bookName]) {
+          bookDistribution[bookName] += (product.stockCurrent || 0);
+        } else {
+          bookDistribution[bookName] = (product.stockCurrent || 0);
+        }
+      }
+    });
 
-    return [
-      { name: 'Data Structures', value: dataStructuresAvailable, color: '#3498db' },
-      { name: 'Agile Development', value: agileDevAvailable, color: '#2ecc71' }
-    ];
+    // Convert to array format for the chart, sort by quantity (highest first)
+    const distributionArray = Object.entries(bookDistribution)
+      .map(([name, value], index) => ({
+        name: name.length > 20 ? name.substring(0, 20) + '...' : name,
+        fullName: name,
+        value,
+        color: colors[index % colors.length]
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6); // Show top 6 books
+
+    // If no books have available stock, show placeholder
+    if (distributionArray.length === 0) {
+      return [
+        { name: 'No Available Books', value: 1, color: '#95a5a6' }
+      ];
+    }
+
+    return distributionArray;
   };
 
   const getCategoryDistributionData = () => {
@@ -287,28 +311,27 @@ const InventoryReport = () => {
     doc.setFont("helvetica", "bold");
     doc.text("D. Visual Analytics", 15, 50);
     
-    // Book Types Distribution (Numbers Only)
+    // Book Types Distribution (Numbers Only) - Dynamic
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text("Book Types Distribution", 20, 75);
     
-    // Get available counts for the two specific book types
-    const dataStructuresBook = products.find(p => p.name && p.name.toLowerCase().includes('data structures'));
-    const agileDevBook = products.find(p => p.name && p.name.toLowerCase().includes('agile development'));
-    
-    const dataStructuresCount = dataStructuresBook ? (dataStructuresBook.stockCurrent || 0) : 0;
-    const agileDevCount = agileDevBook ? (agileDevBook.stockCurrent || 0) : 0;
-    const totalBooksShown = dataStructuresCount + agileDevCount;
+    // Get dynamic book distribution data (same as web interface)
+    const stockDistributionData = getStockDistributionData();
+    const totalAvailableBooks = stockDistributionData.reduce((sum, item) => sum + item.value, 0);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(`• Data Structures Available: ${dataStructuresCount} books`, 25, 90);
-    doc.text(`• Agile Development Available: ${agileDevCount} books`, 25, 100);
-    if (totalBooksShown > 0) {
-      const dsPercentage = ((dataStructuresCount / totalBooksShown) * 100).toFixed(1);
-      const agilePercentage = ((agileDevCount / totalBooksShown) * 100).toFixed(1);
-      doc.text(`• Data Structures: ${dsPercentage}% of available books`, 25, 110);
-      doc.text(`• Agile Development: ${agilePercentage}% of available books`, 25, 120);
+    
+    if (stockDistributionData.length > 0 && stockDistributionData[0].name !== 'No Available Books') {
+      // Show top available books with their counts and percentages
+      stockDistributionData.forEach((book, index) => {
+        const yPosition = 90 + (index * 10);
+        const percentage = totalAvailableBooks > 0 ? ((book.value / totalAvailableBooks) * 100).toFixed(1) : 0;
+        doc.text(`• ${book.fullName || book.name}: ${book.value} available (${percentage}%)`, 25, yPosition);
+      });
+    } else {
+      doc.text("• No books currently available in inventory", 25, 90);
     }
     
     // Category Distribution (Numbers Only)
@@ -330,12 +353,16 @@ const InventoryReport = () => {
       doc.text("• No category data available", 25, 160);
     }
     
-    // Summary statistics with book type breakdown
+    // Summary statistics with dynamic book type breakdown
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     const totalSystemBooks = pdfStats.totalBooksInSystem;
-    doc.text(`Total Books in System: ${totalSystemBooks} | Data Structures: ${dataStructuresCount} | Agile Development: ${agileDevCount}`, 20, 140);
+    const topTwoBooks = stockDistributionData.slice(0, 2);
+    const summaryText = topTwoBooks.length >= 2 
+      ? `Total Books: ${totalSystemBooks} | ${topTwoBooks[0].name}: ${topTwoBooks[0].value} | ${topTwoBooks[1].name}: ${topTwoBooks[1].value}`
+      : `Total Books in System: ${totalSystemBooks} | Available Books: ${totalAvailableBooks}`;
+    doc.text(summaryText, 20, 140);
     
     // E. System Information
     const sectionEY = 170;
@@ -439,7 +466,7 @@ const InventoryReport = () => {
       )}
 
       <div className="report-header">
-        <h2>� Inventory Management Reports</h2>
+        <h2>  Inventory Management Reports</h2>
         <div className="report-actions">
           <button onClick={handleRefresh} className="btn-refresh">
             🔄 Refresh Data
