@@ -35,7 +35,7 @@ const Alerts = ({ setCurrentPage }) => {
   } = useInventory();
 
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(30);
+  const [refreshInterval, setRefreshInterval] = useState(15); // Reduced to 15 seconds for more frequent updates
   const [showSettings, setShowSettings] = useState(false);
   const [notification, setNotification] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -50,14 +50,58 @@ const Alerts = ({ setCurrentPage }) => {
   // Auto refresh inventory data
   useEffect(() => {
     if (autoRefresh) {
-      const interval = setInterval(() => {
+      const interval = setInterval(async () => {
+        const previousAlertCount = alerts.length;
         setRefreshing(true);
-        syncWithProducts().finally(() => setRefreshing(false));
+        
+        try {
+          await syncWithProducts();
+          
+          // Check if alerts have changed after a brief delay to allow context updates
+          setTimeout(() => {
+            const currentAlertCount = alerts.length;
+            if (currentAlertCount !== previousAlertCount) {
+              showNotification(`🔔 Alerts updated: ${currentAlertCount} active alerts`);
+            }
+          }, 1000);
+          
+        } catch (error) {
+          console.error('Auto-refresh failed:', error);
+        } finally {
+          setRefreshing(false);
+        }
       }, refreshInterval * 1000);
       
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, refreshInterval, syncWithProducts]);
+  }, [autoRefresh, refreshInterval, syncWithProducts, alerts.length]);
+
+  // Monitor inventory changes and trigger refresh when needed
+  useEffect(() => {
+    // This will trigger when inventory or alerts change from context
+    if (inventory.length > 0) {
+      console.log('Inventory updated, alerts should refresh automatically');
+    }
+  }, [inventory, alerts]);
+
+  // Initial refresh on component mount
+  useEffect(() => {
+    // Force refresh when component loads
+    const performInitialRefresh = async () => {
+      setRefreshing(true);
+      try {
+        await syncWithProducts();
+        showNotification("🔄 Alerts page loaded - inventory synchronized");
+      } catch (error) {
+        console.error('Initial refresh failed:', error);
+        showNotification("⚠️ Warning: Failed to sync with latest inventory data");
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    
+    performInitialRefresh();
+  }, []); // Only run once on mount
 
   const showNotification = (message) => {
     setNotification(message);
@@ -67,10 +111,20 @@ const Alerts = ({ setCurrentPage }) => {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
+      // Force a complete refresh of inventory data
       await syncWithProducts();
-      showNotification("Inventory data refreshed successfully!");
+      
+      // Clear any cached data
+      localStorage.removeItem('inventory');
+      
+      // Wait a moment for the context to update
+      setTimeout(() => {
+        showNotification(`✅ Inventory data refreshed at ${new Date().toLocaleTimeString()}`);
+      }, 500);
+      
     } catch (error) {
-      showNotification("Failed to refresh inventory data");
+      console.error('Refresh error:', error);
+      showNotification("❌ Failed to refresh inventory data - check network connection");
     } finally {
       setRefreshing(false);
     }

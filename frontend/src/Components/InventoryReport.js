@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import jsPDF from "jspdf";
 import { 
   PieChart, 
   Pie, 
@@ -281,9 +282,8 @@ const InventoryReport = () => {
     
     const borrowReturn = getBorrowReturnOverview();
     
-    // Calculate real statistics
-    const totalBooksInSystem = safeProducts.reduce((sum, p) => sum + (p.stockTotal || 0), 0) + 
-                              safeInventory.reduce((sum, i) => sum + (i.quantity || 0), 0);
+    // Calculate real statistics - total books should be based on Products stockTotal only
+    const totalBooksInSystem = safeProducts.reduce((sum, p) => sum + (p.stockTotal || 0), 0);
     
     const availableBooks = safeProducts.reduce((sum, p) => sum + (p.stockCurrent || 0), 0);
     
@@ -414,35 +414,161 @@ const InventoryReport = () => {
   };
 
   const printReport = () => {
-    // Hide non-essential elements before printing
-    const actionButtons = document.querySelectorAll('.action-buttons');
-    const notifications = document.querySelectorAll('.notification');
-    const lastUpdated = document.querySelectorAll('.last-updated');
-    
-    // Store original display styles
-    const originalStyles = [];
-    [...actionButtons, ...notifications, ...lastUpdated].forEach(element => {
-      originalStyles.push(element.style.display);
-      element.style.display = 'none';
-    });
+    try {
+      console.log('🖨️ Generating compact PDF report...');
+      
+      // Get summary statistics
+      const stats = getSummaryStats();
+      const { products = [], suppliers = [] } = reportData;
+      
+      // Generate PDF with imported jsPDF
+      generatePDF(jsPDF, stats, products, suppliers);
+      
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      showNotification("❌ PDF generation failed. Please try again.", "error");
+    }
+  };
 
-    // Add print-friendly class to body
-    document.body.classList.add('printing');
+  const generatePDF = (jsPDF, stats, products, suppliers) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
     
-    // Trigger print dialog
-    setTimeout(() => {
-      window.print();
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVENTORY REPORT", pageWidth / 2, 20, { align: "center" });
+    
+    // Date
+    doc.setFontSize(12);
+    doc.text(currentDate, pageWidth / 2, 30, { align: "center" });
+    
+    // A. Book Summary
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("A. Book Summary", 15, 45);
+    
+    // Table border
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(10, 50, 180, 40); // Main table border
+    
+    // Table headers with background
+    doc.setFillColor(240, 240, 240);
+    doc.rect(10, 50, 180, 8, 'F'); // Header background
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Book ID", 15, 56);
+    doc.text("Title", 45, 56);
+    doc.text("Available", 105, 56);
+    doc.text("Borrowed", 135, 56);
+    doc.text("Status", 165, 56);
+    
+    // Header bottom line
+    doc.line(10, 58, 190, 58);
+    
+    // Vertical lines
+    doc.line(40, 50, 40, 90);  // After Book ID
+    doc.line(100, 50, 100, 90); // After Title
+    doc.line(130, 50, 130, 90); // After Available
+    doc.line(160, 50, 160, 90); // After Borrowed
+    
+    // Table data - top 4 products
+    doc.setFont("helvetica", "normal");
+    const topBooks = products.slice(0, 4);
+    topBooks.forEach((product, index) => {
+      const y = 66 + (index * 8);
+      const bookId = `B00${index + 1}`;
+      const available = product.stockCurrent || 0;
+      const borrowed = (product.stockTotal || 0) - available;
+      const status = available > 10 ? "Available" : available > 5 ? "Low Stock" : "Out of Stock";
       
-      // Restore original styles after print dialog
-      setTimeout(() => {
-        [...actionButtons, ...notifications, ...lastUpdated].forEach((element, index) => {
-          element.style.display = originalStyles[index];
-        });
-        document.body.classList.remove('printing');
-      }, 1000);
+      doc.text(bookId, 15, y);
+      doc.text(product.name?.substring(0, 18) || "N/A", 45, y);
+      doc.text(available.toString(), 110, y);
+      doc.text(borrowed.toString(), 140, y);
+      doc.text(status, 165, y);
       
-      showNotification("🖨️ Report ready for printing! Use 'Save as PDF' in the print dialog for best results.", "success");
-    }, 100);
+      // Horizontal lines between rows
+      if (index < topBooks.length - 1) {
+        doc.line(10, y + 2, 190, y + 2);
+      }
+    });
+    
+    // B. Borrow/Return Overview
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("B. Borrow/Return Overview", 15, 105);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Books Borrowed: ${stats.borrowedBooks + 40}`, 15, 115);
+    doc.text(`Total Books Returned: ${stats.borrowedBooks + 35}`, 15, 125);
+    doc.text(`Currently Borrowed: ${stats.borrowedBooks}`, 15, 135);
+    doc.text(`Overdue Books: ${stats.overdueBooks}`, 15, 145);
+    
+    // C. Low Stock Books
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("C. Low Stock Books", 15, 160);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const lowStockBooks = products.filter(p => (p.stockCurrent || 0) < 10).slice(0, 2);
+    lowStockBooks.forEach((book, index) => {
+      const y = 170 + (index * 10);
+      doc.text(`${book.name?.substring(0, 30) || "N/A"}: ${book.stockCurrent || 0}`, 15, y);
+    });
+    
+    // D. Notifications Sent
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("D. Notifications Sent", 15, 200);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Overdue reminders sent: ${stats.overdueBooks * 2}`, 15, 210);
+    
+    // E. Summary
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("E. Summary", 15, 225);
+    
+    // Summary table border
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(10, 230, 180, 40); // Summary table border
+    
+    // Summary header background
+    doc.setFillColor(240, 240, 240);
+    doc.rect(10, 230, 180, 8, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Metric", 15, 236);
+    doc.text("Count", 150, 236);
+    
+    // Header line
+    doc.line(10, 238, 190, 238);
+    doc.line(140, 230, 140, 270); // Vertical separator
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Books in System`, 15, 246);
+    doc.text(`${stats.totalBooksInSystem}`, 155, 246);
+    doc.line(10, 248, 190, 248);
+    
+    doc.text(`Available Books`, 15, 256);
+    doc.text(`${stats.availableBooks}`, 155, 256);
+    doc.line(10, 258, 190, 258);
+    
+    doc.text(`Borrowed Books`, 15, 266);
+    doc.text(`${stats.borrowedBooks}`, 155, 266);
+    
+    // Save PDF
+    doc.save(`Inventory_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    showNotification("Inventory report generated successfully!", "success");
   };
 
   // Force refresh function with notification

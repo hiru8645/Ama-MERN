@@ -37,7 +37,6 @@ const Product = ({ setCurrentPage }) => {
     status: "",
     supplier: "",
     // Supplier fields
-    supplierName: "",
     supplierContact: "",
     supplierEmail: "",
     supplierPhone: "",
@@ -162,7 +161,7 @@ const Product = ({ setCurrentPage }) => {
     // Form validation
     if (!newProduct.name || !newProduct.code || !newProduct.category || 
         !newProduct.price || !newProduct.stockCurrent || !newProduct.stockTotal || 
-        !newProduct.status || !newProduct.supplier || !newProduct.supplierName || 
+        !newProduct.status || !newProduct.supplier || 
         !newProduct.supplierContact || !newProduct.supplierEmail || !newProduct.supplierPhone || 
         !newProduct.supplierAddress || !newProduct.supplierBooks) {
       alert("All product and supplier fields are required!");
@@ -184,9 +183,16 @@ const Product = ({ setCurrentPage }) => {
     }
 
     // Validate price format
-    const priceRegex = /^\$?\d+(\.\d{2})?$/;
-    if (!priceRegex.test(newProduct.price.replace(/[,$]/g, ''))) {
-      alert("Please enter a valid price format (e.g., $49.99 or 49.99)!");
+    const priceRegex = /^Rs\.?\d+(\.\d{2})?$/;
+    if (!priceRegex.test(newProduct.price.replace(/[,Rs\.]/g, ''))) {
+      alert("Please enter a valid price format (e.g., Rs.49.99 or 49.99)!");
+      return;
+    }
+
+    // Validate phone number format (Sri Lankan phone numbers)
+    const phoneRegex = /^(\+94|0)?[1-9]\d{8}$/;
+    if (!phoneRegex.test(newProduct.supplierPhone.replace(/[\s\-\(\)]/g, ''))) {
+      alert("Please enter a valid Sri Lankan phone number (e.g., +94771234567, 0771234567, or 771234567)!");
       return;
     }
 
@@ -207,7 +213,7 @@ const Product = ({ setCurrentPage }) => {
     
     // Prepare supplier payload
     const supplierPayload = {
-      name: newProduct.supplierName,
+      name: newProduct.supplierContact, // Use contact person as supplier name
       contact: newProduct.supplierContact,
       email: newProduct.supplierEmail,
       phone: newProduct.supplierPhone,
@@ -292,7 +298,6 @@ const Product = ({ setCurrentPage }) => {
         status: "",
         supplier: "",
         // Supplier fields
-        supplierName: "",
         supplierContact: "",
         supplierEmail: "",
         supplierPhone: "",
@@ -317,7 +322,6 @@ const Product = ({ setCurrentPage }) => {
       status: "",
       supplier: "",
       // Supplier fields
-      supplierName: "",
       supplierContact: "",
       supplierEmail: "",
       supplierPhone: "",
@@ -342,7 +346,6 @@ const Product = ({ setCurrentPage }) => {
       status: product.status,
       supplier: product.supplier,
       // Supplier fields - initialize empty for edit mode
-      supplierName: "",
       supplierContact: "",
       supplierEmail: "",
       supplierPhone: "",
@@ -639,12 +642,12 @@ const Product = ({ setCurrentPage }) => {
                   <label className="form-label">Price</label>
                   <input
                     name="price"
-                    placeholder="e.g., $49.99"
+                    placeholder="e.g., Rs.49.99"
                     value={newProduct.price}
                     onChange={handleFormChange}
                     className="form-input"
-                    pattern="^\$?\d+(\.\d{2})?$"
-                    title="Please enter a valid price format (e.g., $49.99 or 49.99)"
+                    pattern="^Rs\.?\d+(\.\d{2})?$"
+                    title="Please enter a valid price format (e.g., Rs.49.99 or 49.99)"
                     required
                   />
                 </div>
@@ -715,18 +718,6 @@ const Product = ({ setCurrentPage }) => {
                 <h3 className="form-section-title">Supplier Details</h3>
                 <div className="form-fields-grid">
                   <div className="form-group">
-                    <label className="form-label">Supplier Name *</label>
-                    <input
-                      name="supplierName"
-                      placeholder="Enter supplier name"
-                      value={newProduct.supplierName}
-                      onChange={handleFormChange}
-                      className="form-input"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-group">
                     <label className="form-label">Contact Person *</label>
                     <input
                       name="supplierContact"
@@ -755,10 +746,12 @@ const Product = ({ setCurrentPage }) => {
                     <label className="form-label">Phone *</label>
                     <input
                       name="supplierPhone"
-                      placeholder="Enter phone number"
+                      placeholder="e.g., +94771234567 or 0771234567"
                       value={newProduct.supplierPhone}
                       onChange={handleFormChange}
                       className="form-input"
+                      pattern="^(\+94|0)?[1-9]\d{8}$"
+                      title="Please enter a valid Sri Lankan phone number (e.g., +94771234567, 0771234567, or 771234567)"
                       required
                     />
                   </div>

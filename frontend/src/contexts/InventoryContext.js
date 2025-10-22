@@ -111,24 +111,104 @@ export const InventoryProvider = ({ children }) => {
   // Sync with products from API
   const syncWithProducts = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:5001/products');
+      const response = await fetch('http://localhost:5001/api/products');
       if (response.ok) {
         const products = await response.json();
-        const inventoryItems = products.map(product => ({
-          id: product._id || product.id,
-          name: product.name,
-          title: product.name, // For backward compatibility
-          author: product.supplier || 'Unknown',
-          category: product.category,
-          stock: parseInt(product.stockCurrent) || 0,
-          threshold: product.threshold || DEFAULT_THRESHOLD,
-          price: parseFloat(product.price) || 0,
-          supplier: product.supplier,
-          status: product.status,
-          code: product.code,
-          lastUpdated: new Date().toISOString()
-        }));
+        
+        // Log products data for debugging
+        console.log('📦 Syncing with products API:', products.length, 'products found');
+        
+        const inventoryItems = products.map(product => {
+          const currentStock = parseInt(product.stockCurrent) || 0;
+          const threshold = product.threshold || DEFAULT_THRESHOLD;
+          
+          // Log each product's stock for debugging
+          console.log(`📊 Product: ${product.name} | Stock: ${currentStock} | Threshold: ${threshold}`);
+          
+          return {
+            id: product._id || product.id,
+            name: product.name,
+            title: product.name, // For backward compatibility
+            author: product.supplier || 'Unknown',
+            category: product.category,
+            stock: currentStock,
+            threshold: threshold,
+            price: parseFloat(product.price) || 0,
+            supplier: product.supplier,
+            status: product.status,
+            code: product.code,
+            stockTotal: product.stockTotal || 0,
+            lastUpdated: new Date().toISOString()
+          };
+        });
+        
+        console.log('🔄 Inventory items prepared:', inventoryItems.length);
+        
+        // Update inventory and trigger alerts check
         setInventory(inventoryItems);
+        setLastUpdated(new Date());
+        
+        // Force alert regeneration after inventory update
+        setTimeout(() => {
+          const newAlerts = [];
+          let alertStats = { outOfStock: 0, critical: 0, veryLow: 0, low: 0, safe: 0 };
+          
+          console.log('🚨 Generating alerts for', inventoryItems.length, 'items...');
+          
+          inventoryItems.forEach(item => {
+            const threshold = item.threshold || DEFAULT_THRESHOLD;
+            const status = getStockStatus(item.stock, threshold);
+            
+            alertStats[status.replace('-', '').replace('_', '')]++;
+            
+            console.log(`⚠️  ${item.name}: Stock=${item.stock}, Threshold=${threshold}, Status=${status}`);
+            
+            if (status === "out-of-stock") {
+              newAlerts.push({
+                id: `out-of-stock-${item.id}`,
+                type: 'out-of-stock',
+                message: `"${item.name || item.title}" is currently OUT OF STOCK and requires immediate restocking.`,
+                item: item,
+                priority: 1,
+                timestamp: new Date()
+              });
+            } else if (status === "critical") {
+              newAlerts.push({
+                id: `critical-${item.id}`,
+                type: 'critical',
+                message: `"${item.name || item.title}" has reached CRITICAL stock level (${item.stock} units remaining).`,
+                item: item,
+                priority: 2,
+                timestamp: new Date()
+              });
+            } else if (status === "very-low") {
+              newAlerts.push({
+                id: `very-low-${item.id}`,
+                type: 'very-low',
+                message: `"${item.name || item.title}" has very low stock (${item.stock} units remaining).`,
+                item: item,
+                priority: 3,
+                timestamp: new Date()
+              });
+            } else if (status === "low") {
+              newAlerts.push({
+                id: `low-${item.id}`,
+                type: 'low',
+                message: `"${item.name || item.title}" has low stock (${item.stock} units remaining).`,
+                item: item,
+                priority: 4,
+                timestamp: new Date()
+              });
+            }
+          });
+          
+          console.log('📊 Alert Statistics:', alertStats);
+          console.log('🔔 Generated', newAlerts.length, 'alerts');
+          
+          // Sort by priority (most critical first)
+          newAlerts.sort((a, b) => a.priority - b.priority);
+          setAlerts(newAlerts);
+        }, 100);
       }
     } catch (error) {
       console.error('Error syncing with products:', error);
@@ -157,10 +237,74 @@ export const InventoryProvider = ({ children }) => {
     localStorage.setItem('inventory', JSON.stringify(inventory));
   }, [inventory]);
 
-  // Check alerts whenever inventory changes
+  // Check alerts whenever inventory changes - direct implementation to avoid dependency cycles
   useEffect(() => {
-    checkInventoryAlerts();
-  }, [checkInventoryAlerts]);
+    if (inventory.length > 0) {
+      console.log('🔍 Inventory changed, recalculating alerts for', inventory.length, 'items');
+      
+      const newAlerts = [];
+      let stockSummary = { total: 0, lowStock: 0, criticalStock: 0, outOfStock: 0 };
+      
+      inventory.forEach(item => {
+        const threshold = item.threshold || DEFAULT_THRESHOLD;
+        const status = getStockStatus(item.stock, threshold);
+        
+        stockSummary.total++;
+        if (status === "out-of-stock") stockSummary.outOfStock++;
+        else if (status === "critical") stockSummary.criticalStock++;
+        else if (status === "very-low" || status === "low") stockSummary.lowStock++;
+        
+        if (status === "out-of-stock") {
+          newAlerts.push({
+            id: `out-of-stock-${item.id}`,
+            type: 'out-of-stock',
+            message: `"${item.name || item.title}" is currently OUT OF STOCK and requires immediate restocking.`,
+            item: item,
+            priority: 1,
+            timestamp: new Date()
+          });
+        } else if (status === "critical") {
+          newAlerts.push({
+            id: `critical-${item.id}`,
+            type: 'critical',
+            message: `"${item.name || item.title}" has reached CRITICAL stock level (${item.stock} units remaining).`,
+            item: item,
+            priority: 2,
+            timestamp: new Date()
+          });
+        } else if (status === "very-low") {
+          newAlerts.push({
+            id: `very-low-${item.id}`,
+            type: 'very-low',
+            message: `"${item.name || item.title}" has very low stock (${item.stock} units remaining).`,
+            item: item,
+            priority: 3,
+            timestamp: new Date()
+          });
+        } else if (status === "low") {
+          newAlerts.push({
+            id: `low-${item.id}`,
+            type: 'low',
+            message: `"${item.name || item.title}" has low stock (${item.stock} units remaining).`,
+            item: item,
+            priority: 4,
+            timestamp: new Date()
+          });
+        }
+      });
+      
+      // Sort by priority (most critical first)
+      newAlerts.sort((a, b) => a.priority - b.priority);
+      
+      console.log('📈 Stock Summary:', stockSummary);
+      console.log('🚨 Alert Summary: Generated', newAlerts.length, 'alerts');
+      
+      setAlerts(newAlerts);
+      setLastUpdated(new Date());
+    } else {
+      console.log('📦 No inventory items to process');
+    }
+  }, [inventory]);
 
   // Dismiss specific alert
   const dismissAlert = useCallback((alertId) => {
@@ -172,6 +316,18 @@ export const InventoryProvider = ({ children }) => {
     setAlerts([]);
   }, []);
 
+  // Force sync when external stock changes occur
+  const forceStockSync = useCallback(async () => {
+    console.log('🔄 Force stock sync requested');
+    try {
+      await syncWithProducts();
+      return true;
+    } catch (error) {
+      console.error('Force sync failed:', error);
+      return false;
+    }
+  }, [syncWithProducts]);
+
   const value = {
     inventory,
     alerts,
@@ -180,6 +336,7 @@ export const InventoryProvider = ({ children }) => {
     addInventoryItem,
     removeInventoryItem,
     syncWithProducts,
+    forceStockSync,
     checkInventoryAlerts,
     dismissAlert,
     clearAllAlerts,

@@ -69,7 +69,7 @@ async function addSampleBooks() {
     
     console.log("Sample books added:");
     result.forEach(book => {
-      console.log(`- ${book.bookId}: ${book.itemName} (Qty: ${book.quantity}, Price: $${book.price})`);
+      console.log(`- ${book.bookId}: ${book.itemName} (Qty: ${book.quantity}, Price: Rs.${book.price})`);
     });
     
   } catch (error) {

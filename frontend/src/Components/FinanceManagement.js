@@ -206,7 +206,7 @@ const FinanceManagement = () => {
                     <td>{payment.buyerId}</td>
                     <td>{payment.giverId}</td>
                     <td>{payment.bookId}</td>
-                    <td>${payment.amount}</td>
+                    <td>Rs.{payment.amount}</td>
                     <td>
                       <span className={`status ${payment.status.toLowerCase()}`}>
                         {payment.status}
@@ -294,7 +294,7 @@ const FinanceManagement = () => {
                 {refunds.map((refund) => (
                   <tr key={refund._id}>
                     <td>{refund.userId}</td>
-                    <td>${refund.amount}</td>
+                    <td>Rs.{refund.amount}</td>
                     <td>{refund.reason}</td>
                     <td>
                       <span className={`status ${refund.status.toLowerCase()}`}>
@@ -336,7 +336,7 @@ const FinanceManagement = () => {
                 {fines.map((fine) => (
                   <tr key={fine._id}>
                     <td>{fine.userId}</td>
-                    <td>${fine.amount}</td>
+                    <td>Rs.{fine.amount}</td>
                     <td>{fine.reason}</td>
                     <td>
                       <span className={`status ${fine.status.toLowerCase()}`}>

@@ -13,6 +13,8 @@ const API_URL = "http://localhost:5001/api/suppliers";
 
 export default function Supplier() {
   const [suppliers, setSuppliers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  
     // Fetch all suppliers from backend
     React.useEffect(() => {
       fetch(API_URL)
@@ -20,6 +22,14 @@ export default function Supplier() {
         .then((data) => setSuppliers(data));
     }, []);
     const [filterOpen, setFilterOpen] = useState(false);
+
+    // Filter suppliers based on search term
+    const filteredSuppliers = suppliers.filter(supplier =>
+      supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     // Keep only the delete handler since suppliers can still be deleted
     const handleEdit = (supplier) => {
@@ -60,6 +70,8 @@ export default function Supplier() {
                   className="search-input"
                   placeholder="Search suppliers..."
                   aria-label="Search suppliers"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <div className="action-buttons">
@@ -104,7 +116,7 @@ export default function Supplier() {
               <div className="header-cell">Actions</div>
             </div>
 
-            {suppliers.map((supplier, index) => (
+            {filteredSuppliers.map((supplier, index) => (
               <div className="table-row" key={supplier._id}>
                 <div className="table-cell">{index + 1}</div>
                 <div className="table-cell supplier-name">{supplier.name}</div>

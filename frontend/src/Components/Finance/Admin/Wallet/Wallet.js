@@ -94,7 +94,7 @@ function Wallet() {
                 </p>
               )}
               <p>
-                <strong>Balance:</strong> {wallet.balance.toFixed(2)} {wallet.currency || "USD"}
+                <strong>Balance:</strong> Rs.{wallet.balance.toFixed(2)}
               </p>
               <p className="wallet-footer">
                 Created: {new Date(wallet.createdAt).toLocaleDateString()}

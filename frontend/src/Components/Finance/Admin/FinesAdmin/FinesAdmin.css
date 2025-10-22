@@ -117,6 +117,137 @@
 }
 
 /* Responsive */
+/* Overdue Books Notification Styles */
+.overdue-notification {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border: 2px solid #c44569;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  width: 100%;
+  max-width: 1000px;
+  color: white;
+  box-shadow: 0 8px 25px rgba(196, 69, 105, 0.4);
+  animation: pulseAlert 2s infinite ease-in-out;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.notification-header h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.toggle-details {
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.4);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.toggle-details:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+.overdue-details {
+  margin-top: 15px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.alert-message {
+  font-size: 16px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.overdue-books-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.overdue-book-item {
+  background: rgba(255,255,255,0.15);
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #ffeaa7;
+}
+
+.book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.book-title {
+  font-weight: bold;
+  font-size: 16px;
+  color: #ffeaa7;
+}
+
+.borrower, .due-date, .days-overdue {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.days-overdue {
+  color: #ffeaa7;
+  font-weight: bold;
+}
+
+.fine-action {
+  text-align: right;
+}
+
+.suggested-fine {
+  background: rgba(255,255,255,0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  color: #ffeaa7;
+}
+
+@keyframes pulseAlert {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .notification-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .overdue-book-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+}
+
 @media (max-width: 600px) {
   .fines-container {
     flex-direction: column;

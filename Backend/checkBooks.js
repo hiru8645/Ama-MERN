@@ -15,7 +15,7 @@ async function checkBooks() {
       console.log(`${index + 1}. ID: ${book._id}`);
       console.log(`   Book ID: ${book.bookId || 'N/A'}`);
       console.log(`   Name: ${book.itemName}`);
-      console.log(`   Price: $${book.price}`);
+      console.log(`   Price: Rs.${book.price}`);
       console.log(`   Quantity: ${book.quantity}`);
       console.log('---');
     });

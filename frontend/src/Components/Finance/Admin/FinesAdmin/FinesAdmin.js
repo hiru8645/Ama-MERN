@@ -6,6 +6,38 @@ function FinesAdmin() {
   const [fines, setFines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [overdueBooks, setOverdueBooks] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Check for overdue books
+  const checkOverdueBooks = () => {
+    try {
+      const borrowedBooks = JSON.parse(localStorage.getItem('borrowedBooks') || '[]');
+      const returnedBookIds = JSON.parse(localStorage.getItem('returnedBooks') || '[]').map(book => book.id);
+      
+      // Filter active borrowed books (not returned)
+      const activeBorrowedBooks = borrowedBooks.filter(book => !returnedBookIds.includes(book.id));
+      
+      // Find overdue books
+      const now = new Date();
+      const overdueList = activeBorrowedBooks.filter(book => {
+        if (!book.dueDate) return false;
+        try {
+          const dueDate = new Date(book.dueDate);
+          return now > dueDate;
+        } catch (error) {
+          console.error('Error parsing due date for book:', book.title, error);
+          return false;
+        }
+      });
+
+      setOverdueBooks(overdueList);
+      return overdueList;
+    } catch (error) {
+      console.error('Error checking overdue books:', error);
+      return [];
+    }
+  };
 
   // Fetch all fines
   const fetchFines = async () => {
@@ -24,6 +56,7 @@ function FinesAdmin() {
 
   useEffect(() => {
     fetchFines();
+    checkOverdueBooks();
   }, []);
 
   // Approve fine
@@ -66,6 +99,48 @@ function FinesAdmin() {
   return (
     <div className="fines-page">
       <h2>📋 All Fines</h2>
+      
+      {/* Overdue Books Notification */}
+      {overdueBooks.length > 0 && (
+        <div className="overdue-notification">
+          <div className="notification-header">
+            <h3>⚠️ Overdue Books Alert</h3>
+            <button 
+              className="toggle-details"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              {showNotifications ? 'Hide Details' : `Show ${overdueBooks.length} Overdue Books`}
+            </button>
+          </div>
+          
+          {showNotifications && (
+            <div className="overdue-details">
+              <p className="alert-message">
+                📚 There are {overdueBooks.length} overdue book(s) that require fine calculation:
+              </p>
+              <div className="overdue-books-list">
+                {overdueBooks.map((book, index) => {
+                  const daysOverdue = Math.floor((new Date() - new Date(book.dueDate)) / (1000 * 60 * 60 * 24));
+                  return (
+                    <div key={index} className="overdue-book-item">
+                      <div className="book-info">
+                        <span className="book-title">{book.title}</span>
+                        <span className="borrower">Borrowed by: {book.borrowerName}</span>
+                        <span className="due-date">Due: {new Date(book.dueDate).toLocaleDateString()}</span>
+                        <span className="days-overdue">{daysOverdue} days overdue</span>
+                      </div>
+                      <div className="fine-action">
+                        <span className="suggested-fine">Suggested Fine: Rs.{daysOverdue * 10}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p>Loading fines...</p>
       ) : error ? (

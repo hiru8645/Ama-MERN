@@ -137,7 +137,7 @@ const OrderManagement = () => {
                 <span className="items-count">{order.items} items</span>
               </div>
               <div className="table-cell">
-                <span className="order-total">${order.total}</span>
+                <span className="order-total">Rs.{order.total}</span>
               </div>
               <div className="table-cell">
                 <select
@@ -215,7 +215,7 @@ const OrderManagement = () => {
               <div className="detail-section">
                 <h4>Order Summary</h4>
                 <p><strong>Items:</strong> {selectedOrder.items} items</p>
-                <p><strong>Total:</strong> ${selectedOrder.total}</p>
+                <p><strong>Total:</strong> Rs.{selectedOrder.total}</p>
                 <p><strong>Status:</strong> 
                   <span 
                     className="status-badge"
