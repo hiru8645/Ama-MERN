@@ -1,316 +1,292 @@
-// Profile.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import Header from './Header';
 import './Profile.css';
 
-const Profile = () => {
-  // Original data backup for cancel
-  const originalData = {
-    firstName: "Natasha",
-    lastName: "Khaleja",
-    dateOfBirth: "1990-10-12",
-    email: "inventory@bookexchange.com",
-    phone: "+44 212 554 846",
-    role: "Inventory Manager",
-    country: "United Kingdom",
-    city: "Leeds, East London",
-    postalCode: "EBT 254"
-  };
+const onlyLetters = value => /^[A-Za-z\s]*$/.test(value);
+const onlyEmailChars = value => /^[A-Za-z0-9@.]*$/.test(value);
+const onlyNumbers = value => /^[0-9]*$/.test(value);
 
-  const [isEditing, setIsEditing] = useState(null); // null = view, 'personal' or 'address' = edit
-  const [formData, setFormData] = useState({ ...originalData });
-  const [errors, setErrors] = useState({});
+const Profile = ({ setCurrentPage }) => {
+  const { user: authUser, logout } = useAuth();
+  const [user, setUser] = useState(null);
+  const [form, setForm] = useState({
+    full_name: '',
+    email: '',
+    uni_id: '',
+    role: '',
+    contact_no: '',
+    faculty: ''
+  });
+  const [editMode, setEditMode] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const validateForm = (section) => {
-    const newErrors = {};
-    if (section === 'personal') {
-      if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-      if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-      if (!formData.email.includes('@')) newErrors.email = 'Valid email is required';
-      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
-    } else if (section === 'address') {
-      if (!formData.country) newErrors.country = 'Country is required';
-      if (!formData.city.trim()) newErrors.city = 'City is required';
-      if (!formData.postalCode.trim()) newErrors.postalCode = 'Postal code is required';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Password change state
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwords, setPasswords] = useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwErr, setPwErr] = useState('');
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error on change
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const handleSave = (section) => {
-    if (!validateForm(section)) {
-      console.error('Validation failed:', errors);
+  useEffect(() => {
+    if (!authUser) {
+      setCurrentPage('user'); // Go to login page
       return;
     }
-    // Simulate API call to save
-    console.log(`Saving ${section} details:`, formData);
-    // In real app: await api.updateProfile(formData);
-    alert(`Successfully saved ${section} details!`); // Temporary feedback
-    setIsEditing(null);
-    setErrors({});
+    setUser(authUser);
+    setForm({
+      full_name: authUser.full_name || '',
+      email: authUser.email || '',
+      uni_id: authUser.uni_id || '',
+      role: authUser.role || '',
+      contact_no: authUser.contact_no || '',
+      faculty: authUser.faculty || ''
+    });
+  }, [authUser, setCurrentPage]);
+
+  const handleChange = e => {
+    const { name, value } = e.target;
+    if (name === 'full_name' || name === 'faculty') {
+      if (!onlyLetters(value)) return;
+    }
+    if (name === 'email') {
+      if (!onlyEmailChars(value)) return;
+    }
+    if (name === 'contact_no') {
+      if (!onlyNumbers(value) || value.length > 10) return;
+    }
+    setForm({ ...form, [name]: value });
   };
 
-  const handleCancel = () => {
-    setFormData({ ...originalData });
-    setErrors({});
-    setIsEditing(null);
-  };
-
-  const handleEdit = (section) => {
-    if (isEditing === section) {
-      handleSave(section);
-    } else {
-      setIsEditing(section);
+  const handleUpdate = async e => {
+    e.preventDefault();
+    if (!editMode) return;
+    setMsg('');
+    setErr('');
+    try {
+      const res = await fetch(`http://localhost:5001/api/users/${user._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg('Profile updated!');
+        setUser(data.user);
+        // Update AuthContext with new user data
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setEditMode(false);
+      } else {
+        setErr(data.message || 'Update failed');
+      }
+    } catch {
+      setErr('Update failed');
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This cannot be undone.')) return;
+    setMsg('');
+    setErr('');
+    try {
+      const res = await fetch(`http://localhost:5001/api/users/${user._id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        logout(); // Use AuthContext logout
+        setMsg('Account deleted.');
+        setTimeout(() => setCurrentPage('home'), 1200);
+      } else {
+        const data = await res.json();
+        setErr(data.message || 'Delete failed');
+      }
+    } catch {
+      setErr('Delete failed');
+    }
+  };
+
+  // Password change handlers
+  const handlePwChange = e => {
+    setPasswords({ ...passwords, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordUpdate = async e => {
+    e.preventDefault();
+    setPwMsg('');
+    setPwErr('');
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      setPwErr('All password fields are required.');
+      return;
+    }
+    if (passwords.new !== passwords.confirm) {
+      setPwErr('New passwords do not match.');
+      return;
+    }
+    
+    try {
+      // Fetch user to check current password
+      const res = await fetch(`http://localhost:5001/api/users/${user._id}`);
+      const data = await res.json();
+      if (!res.ok || !data.user) {
+        setPwErr('User not found.');
+        return;
+      }
+      if (data.user.password !== passwords.current) {
+        setPwErr('Current password is incorrect.');
+        return;
+      }
+      // Update password
+      const updateRes = await fetch(`http://localhost:5001/api/users/${user._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, password: passwords.new })
+      });
+      const updateData = await updateRes.json();
+      if (updateRes.ok) {
+        setPwMsg('Password updated!');
+        setUser(updateData.user);
+        localStorage.setItem('user', JSON.stringify(updateData.user));
+        setShowPasswordForm(false);
+        setPasswords({ current: '', new: '', confirm: '' });
+      } else {
+        setPwErr(updateData.message || 'Password update failed');
+      }
+    } catch {
+      setPwErr('Password update failed');
+    }
+  };
+
+  if (!user) return null;
+
   return (
-    <div className="profile-container">
-      <div className="profile-header">
-        <h1>My Profile</h1>
+    <div className="profile-bg">
+      <Header setCurrentPage={setCurrentPage} />
+      
+      <div className="profile-container-wide">
+        <div className="profile-header-section">
+          <button className="back-btn" onClick={() => setCurrentPage('user')}>
+            <span>←</span> Back to User Management
+          </button>
+          <h2 style={{ marginBottom: 24 }}>My Profile</h2>
+        </div>
+        <form
+          className="profile-form"
+          onSubmit={handleUpdate}
+          onKeyDown={e => {
+            if (!editMode && e.key === 'Enter') e.preventDefault();
+          }}
+        >
+          <label htmlFor="full_name">Full Name</label>
+          <input id="full_name" name="full_name" value={form.full_name} onChange={handleChange} disabled={!editMode} required />
+
+          <label htmlFor="email">Email</label>
+          <input id="email" name="email" value={form.email} onChange={handleChange} disabled={!editMode} required />
+
+          <label htmlFor="uni_id">University ID</label>
+          <input id="uni_id" name="uni_id" value={form.uni_id} onChange={handleChange} disabled={!editMode} required />
+
+          <label htmlFor="role">Role</label>
+          <select id="role" name="role" value={form.role} onChange={handleChange} disabled>
+            <option value="student">Student</option>
+            <option value="lecturer">Lecturer</option>
+          </select>
+
+          <label htmlFor="contact_no">Contact Number</label>
+          <input
+            id="contact_no"
+            name="contact_no"
+            value={form.contact_no}
+            onChange={handleChange}
+            disabled={!editMode}
+            required
+            maxLength={10}
+            pattern="[0-9]{10}"
+            title="Contact number must be exactly 10 digits"
+          />
+
+          <label htmlFor="faculty">Faculty</label>
+          <input id="faculty" name="faculty" value={form.faculty} onChange={handleChange} disabled={!editMode} required />
+
+          {/* Only show Save button in edit mode, inside the form */}
+          {editMode && (
+            <button type="submit">Save</button>
+          )}
+        </form>
+
+        {/* Show Edit button outside the form when not in edit mode */}
+        {!editMode && (
+          <button
+            type="button"
+            className="profile-delete-btn"
+            onClick={() => setEditMode(true)}
+          >
+            Edit
+          </button>
+        )}
+
+        <button
+          className="profile-delete-btn"
+          onClick={handleDelete}
+        >
+          Delete Account
+        </button>
+        <button
+          className="profile-delete-btn"
+          style={{ background: '#f39c12', marginTop: 12 }}
+          onClick={() => setShowPasswordForm(!showPasswordForm)}
+        >
+          {showPasswordForm ? 'Cancel Password Change' : 'Change Password'}
+        </button>
+        {msg && <div className="profile-success">{msg}</div>}
+        {err && <div className="profile-error">{err}</div>}
+
+        {showPasswordForm && (
+          <form className="profile-form" style={{ marginTop: 24, borderTop: '1px solid #eee', paddingTop: 18 }} onSubmit={handlePasswordUpdate}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="current"
+              placeholder="Current Password"
+              value={passwords.current}
+              onChange={handlePwChange}
+              required
+            />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="new"
+              placeholder="New Password"
+              value={passwords.new}
+              onChange={handlePwChange}
+              required
+            />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="confirm"
+              placeholder="Confirm New Password"
+              value={passwords.confirm}
+              onChange={handlePwChange}
+              required
+            />
+            <label style={{ fontSize: 14, marginBottom: 8 }}>
+              <input
+                type="checkbox"
+                checked={showPassword}
+                onChange={e => setShowPassword(e.target.checked)}
+                style={{ marginRight: 6 }}
+              />
+              Show Passwords
+            </label>
+            <button type="submit" style={{ background: '#2980b9', color: '#fff' }}>Update Password</button>
+            {pwMsg && <div className="profile-success">{pwMsg}</div>}
+            {pwErr && <div className="profile-error">{pwErr}</div>}
+          </form>
+        )}
       </div>
       
-      <div className="profile-card">
-        <div className="profile-photo">
-          <div className="photo-placeholder">
-            <span>NK</span>
-          </div>
-        </div>
-        <div className="profile-info">
-          <h2>{formData.firstName} {formData.lastName}</h2>
-          <p className="location">Leeds, United Kingdom</p>
-          <div className="profile-stats">
-            <span className="stat">📚 Books Managed: 1,247</span>
-            <span className="stat">📖 Active Listings: 89</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="section">
-        <div className="section-header">
-          <h3>Personal Information</h3>
-          <button 
-            className={`edit-btn ${isEditing === 'personal' ? 'save-mode' : ''}`}
-            onClick={() => handleEdit('personal')}
-          >
-            {isEditing === 'personal' ? 'Save' : 'Edit'}
-          </button>
-        </div>
-        
-        <div className="info-grid">
-          <div className="info-row">
-            <label>First Name</label>
-            {isEditing === 'personal' ? (
-              <input 
-                type="text" 
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                className={`edit-input ${errors.firstName ? 'error' : ''}`}
-              />
-            ) : (
-              <span>{formData.firstName}</span>
-            )}
-            {errors.firstName && <span className="error-text">{errors.firstName}</span>}
-          </div>
-          
-          <div className="info-row">
-            <label>Last Name</label>
-            {isEditing === 'personal' ? (
-              <input 
-                type="text" 
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                className={`edit-input ${errors.lastName ? 'error' : ''}`}
-              />
-            ) : (
-              <span>{formData.lastName}</span>
-            )}
-            {errors.lastName && <span className="error-text">{errors.lastName}</span>}
-          </div>
-          
-          <div className="info-row">
-            <label>Date of Birth</label>
-            {isEditing === 'personal' ? (
-              <input 
-                type="date" 
-                name="dateOfBirth"
-                value={formData.dateOfBirth}
-                onChange={handleInputChange}
-                className={`edit-input ${errors.dateOfBirth ? 'error' : ''}`}
-              />
-            ) : (
-              <span>12-10-1990</span>
-            )}
-            {errors.dateOfBirth && <span className="error-text">{errors.dateOfBirth}</span>}
-          </div>
-          
-          <div className="info-row">
-            <label>Email Address</label>
-            {isEditing === 'personal' ? (
-              <input 
-                type="email" 
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`edit-input ${errors.email ? 'error' : ''}`}
-              />
-            ) : (
-              <span>{formData.email}</span>
-            )}
-            {errors.email && <span className="error-text">{errors.email}</span>}
-          </div>
-          
-          <div className="info-row">
-            <label>Phone Number</label>
-            {isEditing === 'personal' ? (
-              <input 
-                type="tel" 
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                className="edit-input"
-              />
-            ) : (
-              <span>(+44) 212 554 846</span>
-            )}
-          </div>
-          
-          <div className="info-row">
-            <label>User Role</label>
-            <span className="role-badge">{formData.role}</span>
-          </div>
-          
-          <div className="info-row">
-            <label>Employee ID</label>
-            <span>BEI-2023-045</span>
-          </div>
-          
-          <div className="info-row">
-            <label>Join Date</label>
-            <span>15-03-2023</span>
-          </div>
-        </div>
-        
-        {isEditing === 'personal' && (
-          <div className="edit-actions">
-            <button className="cancel-btn" onClick={handleCancel}>Cancel</button>
-          </div>
-        )}
-      </div>
-
-      <div className="section">
-        <div className="section-header">
-          <h3>Address</h3>
-          <button 
-            className={`edit-btn ${isEditing === 'address' ? 'save-mode' : ''}`}
-            onClick={() => handleEdit('address')}
-          >
-            {isEditing === 'address' ? 'Save' : 'Edit'}
-          </button>
-        </div>
-        
-        <div className="address-grid">
-          <div className="address-row">
-            <label>Country</label>
-            {isEditing === 'address' ? (
-              <select 
-                name="country" 
-                value={formData.country}
-                onChange={handleInputChange}
-                className={`edit-input ${errors.country ? 'error' : ''}`}
-              >
-                <option value="">Select Country</option>
-                <option value="United Kingdom">United Kingdom</option>
-                <option value="United States">United States</option>
-                <option value="Canada">Canada</option>
-                <option value="Australia">Australia</option>
-                <option value="Sri Lanaka">Sri Lanka</option>
-                <option value="India">India</option>
-                <option value="Germany">Germany</option>
-                <option value="France">France</option>
-              </select>
-            ) : (
-              <span>{formData.country}</span>
-            )}
-            {errors.country && <span className="error-text">{errors.country}</span>}
-          </div>
-          
-          <div className="address-row">
-            <label>City</label>
-            {isEditing === 'address' ? (
-              <input 
-                type="text" 
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                className={`edit-input ${errors.city ? 'error' : ''}`}
-              />
-            ) : (
-              <span>{formData.city}</span>
-            )}
-            {errors.city && <span className="error-text">{errors.city}</span>}
-          </div>
-          
-          <div className="address-row">
-            <label>Postal Code</label>
-            {isEditing === 'address' ? (
-              <input 
-                type="text" 
-                name="postalCode"
-                value={formData.postalCode}
-                onChange={handleInputChange}
-                className={`edit-input ${errors.postalCode ? 'error' : ''}`}
-              />
-            ) : (
-              <span>{formData.postalCode}</span>
-            )}
-            {errors.postalCode && <span className="error-text">{errors.postalCode}</span>}
-          </div>
-        </div>
-        
-        {isEditing === 'address' && (
-          <div className="edit-actions">
-            <button className="cancel-btn" onClick={handleCancel}>Cancel</button>
-          </div>
-        )}
-      </div>
-
-      <div className="section">
-        <div className="section-header">
-          <h3>Inventory Manager Settings</h3>
-        </div>
-        <div className="settings-grid">
-          <div className="setting-item">
-            <label>Book Condition Guidelines</label>
-            <span className="status-badge active">Enabled</span>
-          </div>
-          <div className="setting-item">
-            <label>Inventory Audit Frequency</label>
-            <span>Monthly</span>
-          </div>
-          <div className="setting-item">
-            <label>Max Books per Listing</label>
-            <span>25 books</span>
-          </div>
-          <div className="setting-item">
-            <label>Notification Preferences</label>
-            <span className="status-badge">Email & SMS</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

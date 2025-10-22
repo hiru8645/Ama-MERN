@@ -1,0 +1,107 @@
+/* UserPanel specific styles */
+.user-info {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.8rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.user-info p {
+  margin: 0;
+  font-weight: 600;
+  color: #fff;
+}
+
+.user-info small {
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: capitalize;
+}
+
+.logout-btn {
+  background-color: #e74c3c !important;
+  margin-top: 1rem;
+}
+
+.logout-btn:hover {
+  background-color: #c0392b !important;
+}
+
+.overview-content {
+  padding: 2rem;
+}
+
+.overview-content h2 {
+  margin-bottom: 2rem;
+  color: #2c3e50;
+  font-size: 2rem;
+}
+
+.user-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  opacity: 0.8;
+}
+
+.stat-details h3 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.stat-details p {
+  margin: 0.5rem 0 0 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+/* Navigation section headers */
+.nav-section-header {
+  margin: 1.5rem 0 0.5rem 0;
+  padding: 0.5rem 1rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav-section-header h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+/* First section header (remove top margin) */
+.nav-section-header:first-of-type {
+  margin-top: 0;
+}
+
+/* Full width layout for authentication pages (when no sidebar) */
+.panel-main.full-width {
+  margin-left: 0;
+  width: 100%;
+  max-width: 100%;
+}

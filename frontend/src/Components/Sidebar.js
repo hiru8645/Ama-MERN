@@ -7,7 +7,6 @@ import {
   FaTruck, 
   FaUsers, 
   FaChartBar, 
-  FaUserCog, 
   FaExchangeAlt,  // ✅ Added for Borrow & Return
   FaArrowLeft     // ✅ Added for Back to Home
 } from 'react-icons/fa';
@@ -81,14 +80,6 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
         >
           <FaChartBar className="menu-icon" />
           <span>Reports</span>
-        </li>
-
-        <li 
-          className={`menu-item ${currentPage === 'profile' ? 'active' : ''}`} 
-          onClick={() => setCurrentPage('profile')}
-        >
-          <FaUserCog className="menu-icon" />
-          <span>Profile</span>
         </li>
       </ul>
     </div>

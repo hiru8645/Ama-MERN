@@ -1,0 +1,92 @@
+/* InventoryPanel specific enhancements */
+.back-to-home {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%) !important;
+  margin-bottom: 20px;
+}
+
+.back-to-home:hover {
+  background: linear-gradient(135deg, #229954 0%, #28b463 100%) !important;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+}
+
+/* Access Control Screens */
+.access-denied, .auth-required {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 40px;
+}
+
+.access-denied {
+  color: #e74c3c;
+}
+
+.auth-required {
+  color: #3498db;
+}
+
+.access-denied h2, .auth-required h2 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+.access-denied p, .auth-required p {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+.access-denied .contact-info, .auth-required .contact-info {
+  background: rgba(52, 152, 219, 0.1);
+  padding: 20px;
+  border-radius: 10px;
+  border-left: 4px solid #3498db;
+  margin-top: 30px;
+}
+
+.access-denied .contact-info {
+  background: rgba(231, 76, 60, 0.1);
+  border-left-color: #e74c3c;
+}
+
+.user-info-display {
+  background: rgba(149, 165, 166, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  margin: 20px 0;
+  width: 100%;
+}
+
+.user-info-display p {
+  margin: 5px 0;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.login-link {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 25px;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.login-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+  text-decoration: none;
+  color: white;
+}

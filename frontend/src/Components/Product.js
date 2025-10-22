@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import "./Product.css";
+import Header from "./Header";
+import { useInventory } from '../contexts/InventoryContext';
+import { formatPrice, cleanPriceForDB, isValidPrice } from '../utils/priceUtils';
 import {
   FaBook,
   FaPencilAlt,
@@ -11,10 +14,25 @@ import {
 } from "react-icons/fa";
 
 // Backend CRUD API base URL
-const API_URL = "http://localhost:5001/products";
+const API_URL = "http://localhost:5001/api/products";
+
+// Utility function to automatically determine book status based on stock levels
+const determineBookStatus = (currentStock, totalStock) => {
+  const stockCurrent = parseInt(currentStock) || 0;
+  const stockTotal = parseInt(totalStock) || 0;
+  
+  if (stockCurrent === 0) {
+    return "OUT OF STOCK";
+  } else if (stockCurrent < Math.max(5, stockTotal * 0.2)) { // Less than 20% of total stock or less than 5
+    return "LOW STOCK";
+  } else {
+    return "IN STOCK";
+  }
+};
 
 
-const Product = () => {
+const Product = ({ setCurrentPage }) => {
+  const { syncWithProducts } = useInventory();
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
@@ -33,6 +51,11 @@ const Product = () => {
     stockTotal: "",
     status: "",
     supplier: "",
+    // Supplier fields
+    supplierContact: "",
+    supplierEmail: "",
+    supplierPhone: "",
+    supplierAddress: "",
   });
 
   // Fetch all products from backend
@@ -45,24 +68,31 @@ const Product = () => {
         }
         
         const data = await response.json();
-        // Add icon and color fields for UI
+        // Add icon and color fields for UI, and auto-generate status if needed
         setProducts(
-          data.map((p) => ({
-            ...p,
-            icon: <FaBook />,
-            stockColor:
-              p.stockCurrent / p.stockTotal > 0.5
-                ? "#3b82f6"
-                : p.stockCurrent > 0
-                ? "#f59e0b"
-                : "#6b7280",
-            statusColor:
-              p.status === "IN STOCK"
-                ? "#22c55e"
-                : p.status === "LOW STOCK"
-                ? "#f59e0b"
-                : "#ef4444",
-          }))
+          data.map((p) => {
+            // Auto-generate status if it's missing or empty
+            const autoStatus = determineBookStatus(p.stockCurrent, p.stockTotal);
+            const finalStatus = p.status && p.status.trim() !== '' ? p.status : autoStatus;
+            
+            return {
+              ...p,
+              status: finalStatus, // Ensure status is properly set
+              icon: <FaBook />,
+              stockColor:
+                p.stockCurrent / p.stockTotal > 0.5
+                  ? "#3b82f6"
+                  : p.stockCurrent > 0
+                  ? "#f59e0b"
+                  : "#6b7280",
+              statusColor:
+                finalStatus === "IN STOCK"
+                  ? "#22c55e"
+                  : finalStatus === "LOW STOCK"
+                  ? "#f59e0b"
+                  : "#ef4444",
+            };
+          })
         );
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -143,17 +173,39 @@ const Product = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setNewProduct({ ...newProduct, [name]: value });
+    
+    // For price field, allow only numbers, decimals, and Rs prefix
+    if (name === 'price') {
+      // Allow numbers, decimal point, and Rs prefix
+      const filteredValue = value.replace(/[^0-9.Rs\s]/g, '');
+      setNewProduct({ ...newProduct, [name]: filteredValue });
+    } else {
+      const updatedProduct = { ...newProduct, [name]: value };
+      
+      // Auto-generate status when stock values change
+      if (name === 'stockCurrent' || name === 'stockTotal') {
+        const currentStock = name === 'stockCurrent' ? value : newProduct.stockCurrent;
+        const totalStock = name === 'stockTotal' ? value : newProduct.stockTotal;
+        
+        if (currentStock !== "" && totalStock !== "") {
+          updatedProduct.status = determineBookStatus(currentStock, totalStock);
+        }
+      }
+      
+      setNewProduct(updatedProduct);
+    }
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     
-    // Form validation
+    // Form validation (status is now auto-generated)
     if (!newProduct.name || !newProduct.code || !newProduct.category || 
         !newProduct.price || !newProduct.stockCurrent || !newProduct.stockTotal || 
-        !newProduct.status || !newProduct.supplier) {
-      alert("All fields are required!");
+        !newProduct.supplier || 
+        !newProduct.supplierContact || !newProduct.supplierEmail || !newProduct.supplierPhone || 
+        !newProduct.supplierAddress) {
+      alert("All product and supplier fields are required!");
       return;
     }
 
@@ -171,29 +223,64 @@ const Product = () => {
       return;
     }
 
-    // Validate price format
-    const priceRegex = /^\$?\d+(\.\d{2})?$/;
-    if (!priceRegex.test(newProduct.price.replace(/[,$]/g, ''))) {
-      alert("Please enter a valid price format (e.g., $49.99 or 49.99)!");
+    // Validate price format using utility function
+    if (!isValidPrice(newProduct.price)) {
+      alert("Please enter a valid price (numbers only)!");
       return;
     }
 
-    const statusText = newProduct.status.toUpperCase();
-    const payload = {
-      ...newProduct,
+    // Validate phone number format (Sri Lankan phone numbers)
+    const phoneRegex = /^(\+94|0)?[1-9]\d{8}$/;
+    if (!phoneRegex.test(newProduct.supplierPhone.replace(/[\s\-()]/g, ''))) {
+      alert("Please enter a valid Sri Lankan phone number (e.g., +94771234567, 0771234567, or 771234567)!");
+      return;
+    }
+
+    // Auto-generate status based on stock levels
+    const autoStatus = determineBookStatus(stockCurrent, stockTotal);
+    
+    // Prepare product payload (excluding supplier detail fields)
+    const productPayload = {
+      name: newProduct.name,
+      code: newProduct.code,
+      category: newProduct.category,
+      price: cleanPriceForDB(newProduct.price),
       stockCurrent,
       stockTotal,
-      status: statusText,
+      status: autoStatus,
+      supplier: newProduct.supplier,
       lastUpdated: new Date().toLocaleString(),
     };
     
+    // Prepare supplier payload
+    const supplierPayload = {
+      name: newProduct.supplierContact, // Use contact person as supplier name
+      contact: newProduct.supplierContact,
+      email: newProduct.supplierEmail,
+      phone: newProduct.supplierPhone,
+      address: newProduct.supplierAddress,
+      books: newProduct.name, // Use the book name from the product being added
+      lastUpdated: new Date().toISOString().slice(0, 10),
+    };
+    
     try {
+      // First, create/update the supplier
+      const supplierResponse = await fetch("http://localhost:5001/api/suppliers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(supplierPayload),
+      });
+      
+      if (!supplierResponse.ok) {
+        throw new Error('Failed to create supplier');
+      }
+      
       if (isEditing) {
         // Update product
         const response = await fetch(`${API_URL}/${editProductId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(productPayload),
         });
         
         if (!response.ok) {
@@ -204,7 +291,7 @@ const Product = () => {
         const response = await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(productPayload),
         });
         
         if (!response.ok) {
@@ -238,6 +325,9 @@ const Product = () => {
         }))
       );
       
+      // Sync with inventory context to trigger alerts
+      await syncWithProducts();
+      
       setShowForm(false);
       setNewProduct({
         name: "",
@@ -248,6 +338,11 @@ const Product = () => {
         stockTotal: "",
         status: "",
         supplier: "",
+        // Supplier fields
+        supplierContact: "",
+        supplierEmail: "",
+        supplierPhone: "",
+        supplierAddress: "",
       });
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -266,6 +361,11 @@ const Product = () => {
       stockTotal: "",
       status: "",
       supplier: "",
+      // Supplier fields
+      supplierContact: "",
+      supplierEmail: "",
+      supplierPhone: "",
+      supplierAddress: "",
     });
   };
 
@@ -279,11 +379,16 @@ const Product = () => {
       name: product.name,
       code: product.code,
       category: product.category,
-      price: product.price,
+      price: formatPrice(product.price),
       stockCurrent: product.stockCurrent,
       stockTotal: product.stockTotal,
       status: product.status,
       supplier: product.supplier,
+      // Supplier fields - initialize empty for edit mode
+      supplierContact: "",
+      supplierEmail: "",
+      supplierPhone: "",
+      supplierAddress: "",
     });
     setShowForm(true);
   };
@@ -322,6 +427,9 @@ const Product = () => {
                 : "#ef4444",
           }))
         );
+        
+        // Sync with inventory context to trigger alerts
+        await syncWithProducts();
       } catch (error) {
         console.error('Error deleting product:', error);
         alert(`Error deleting product: ${error.message}`);
@@ -330,7 +438,12 @@ const Product = () => {
   };
 
   return (
-    <div className="product-container" style={{ marginLeft: '240px' }}>
+    <>
+      {setCurrentPage && <Header setCurrentPage={setCurrentPage} />}
+      <div className="product-container" style={{ 
+        marginLeft: setCurrentPage ? '240px' : '0', 
+        marginTop: setCurrentPage ? '80px' : '0' 
+      }}>
       {/* Hero Section */}
       <div className="hero-section">
         <div className="hero-content">
@@ -365,7 +478,7 @@ const Product = () => {
             </button>
             <button onClick={handleAddButton} className="add-button">
               <FaPlus className="button-icon" />
-              Add Book
+              Add Book & Supplier
             </button>
           </div>
         </div>
@@ -453,7 +566,7 @@ const Product = () => {
             </div>
 
             <div className="table-cell">
-              <span className="price">{product.price}</span>
+              <span className="price">{formatPrice(product.price)}</span>
             </div>
 
             <div className="table-cell">
@@ -517,7 +630,7 @@ const Product = () => {
           <div className="modal-content">
             <div className="modal-header">
               <h2 className="modal-title">
-                {isEditing ? "Edit Book" : "Add New Book"}
+                {isEditing ? "Edit Book" : "Add New Book & Supplier"}
               </h2>
             </div>
             
@@ -567,12 +680,12 @@ const Product = () => {
                   <label className="form-label">Price</label>
                   <input
                     name="price"
-                    placeholder="e.g., $49.99"
+                    placeholder="e.g., 49.99 or Rs.49.99"
                     value={newProduct.price}
                     onChange={handleFormChange}
                     className="form-input"
-                    pattern="^\$?\d+(\.\d{2})?$"
-                    title="Please enter a valid price format (e.g., $49.99 or 49.99)"
+                    type="text"
+                    title="Please enter a valid price (numbers only)"
                     required
                   />
                 </div>
@@ -606,19 +719,20 @@ const Product = () => {
                 </div>
                 
                 <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select
-                    name="status"
-                    value={newProduct.status}
-                    onChange={handleFormChange}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">Select Status</option>
-                    {statuses.filter(s => s !== "All Status").map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <label className="form-label">Status (Auto-Generated)</label>
+                  <div className="status-display">
+                    <span className={`status-badge ${
+                      newProduct.status === 'IN STOCK' ? 'status-available' :
+                      newProduct.status === 'LOW STOCK' ? 'status-low' :
+                      newProduct.status === 'OUT OF STOCK' ? 'status-out' :
+                      'status-pending'
+                    }`}>
+                      {newProduct.status || 'Enter stock values to see status'}
+                    </span>
+                  </div>
+                  <small className="form-hint">
+                    Status is automatically determined based on stock levels
+                  </small>
                 </div>
                 
                 <div className="form-group">
@@ -638,6 +752,63 @@ const Product = () => {
                 </div>
               </div>
               
+              {/* Supplier Details Section */}
+              <div className="form-section">
+                <h3 className="form-section-title">Supplier Details</h3>
+                <div className="form-fields-grid">
+                  <div className="form-group">
+                    <label className="form-label">Contact Person *</label>
+                    <input
+                      name="supplierContact"
+                      placeholder="Enter contact person"
+                      value={newProduct.supplierContact}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Email *</label>
+                    <input
+                      name="supplierEmail"
+                      type="email"
+                      placeholder="Enter email address"
+                      value={newProduct.supplierEmail}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Phone *</label>
+                    <input
+                      name="supplierPhone"
+                      placeholder="e.g., +94771234567 or 0771234567"
+                      value={newProduct.supplierPhone}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      pattern="^(\+94|0)?[1-9]\d{8}$"
+                      title="Please enter a valid Sri Lankan phone number (e.g., +94771234567, 0771234567, or 771234567)"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Address *</label>
+                    <input
+                      name="supplierAddress"
+                      placeholder="Enter address"
+                      value={newProduct.supplierAddress}
+                      onChange={handleFormChange}
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
               <div className="form-actions">
                 <button
                   type="button"
@@ -647,14 +818,15 @@ const Product = () => {
                   Cancel
                 </button>
                 <button type="submit" className="submit-button">
-                  {isEditing ? "Update Book" : "Add Book"}
+                  {isEditing ? "Update Book" : "Add Book & Supplier"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

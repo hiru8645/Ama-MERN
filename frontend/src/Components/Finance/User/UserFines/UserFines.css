@@ -1,0 +1,101 @@
+/* Full-page background */
+.fines-page {
+  min-height: 100vh;
+  width: 100%;
+  background-image: url("../../../../assets/images/bg.jpg"); /* same as wallet */
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 60px 20px 40px 20px;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Page header */
+.fines-page h2 {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 40px;
+  color: #0d6efd;
+  text-align: center;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+}
+
+/* Fines container */
+.fines-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Fine card */
+.fine-card {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 25px 30px;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+  width: 100%;
+  text-align: center;
+  margin-bottom: 20px;
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+.fine-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+}
+
+/* Fine header */
+.fine-card h3 {
+  font-size: 24px;
+  font-weight: bold;
+  color: #0dfd8d;
+  margin-bottom: 15px;
+}
+
+/* Fine details */
+.fine-card p {
+  font-size: 16px;
+  color: #333;
+  margin: 8px 0;
+}
+
+.fine-card p strong {
+  color: #0d6efd;
+}
+
+/* Fine footer */
+.fine-footer {
+  margin-top: 15px;
+  font-size: 14px;
+  color: #555;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .fines-page {
+    padding: 40px 15px 30px 15px;
+  }
+  
+  .fine-card {
+    padding: 20px 22px;
+  }
+  
+  .fine-card h3 {
+    font-size: 22px;
+  }
+  
+  .fine-card p {
+    font-size: 15px;
+  }
+}

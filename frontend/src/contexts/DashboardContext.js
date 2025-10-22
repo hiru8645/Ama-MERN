@@ -30,12 +30,22 @@ export const DashboardProvider = ({ children }) => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setRefreshing(true);
+      console.log('Fetching dashboard data from:', API_BASE_URL);
       
       // Fetch all data concurrently
       const [productsRes, suppliersRes, inventoryRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/products`).catch(() => ({ ok: false, json: () => [] })),
-        fetch(`${API_BASE_URL}/suppliers`).catch(() => ({ ok: false, json: () => [] })),
-        fetch(`${API_BASE_URL}/inventory`).catch(() => ({ ok: false, json: () => ({ Items: [] }) }))
+        fetch(`${API_BASE_URL}/api/products`).catch((err) => {
+          console.warn('Products fetch failed:', err);
+          return { ok: false, json: () => [] };
+        }),
+        fetch(`${API_BASE_URL}/api/suppliers`).catch((err) => {
+          console.warn('Suppliers fetch failed:', err);
+          return { ok: false, json: () => [] };
+        }),
+        fetch(`${API_BASE_URL}/api/inventory`).catch((err) => {
+          console.warn('Inventory fetch failed:', err);
+          return { ok: false, json: () => ({ Items: [] }) };
+        })
       ]);
 
       let products = [];
@@ -43,16 +53,27 @@ export const DashboardProvider = ({ children }) => {
       let inventory = [];
 
       if (productsRes.ok) {
-        products = await productsRes.json();
+        const productsData = await productsRes.json();
+        products = productsData;
+        console.log('Products fetched:', products.length, 'items');
+      } else {
+        console.warn('Products API response not ok:', productsRes.status);
       }
 
       if (suppliersRes.ok) {
-        suppliers = await suppliersRes.json();
+        const suppliersData = await suppliersRes.json();
+        suppliers = suppliersData;
+        console.log('Suppliers fetched:', suppliers.length, 'items');
+      } else {
+        console.warn('Suppliers API response not ok:', suppliersRes.status);
       }
 
       if (inventoryRes.ok) {
         const inventoryResponse = await inventoryRes.json();
         inventory = inventoryResponse.Items || inventoryResponse || [];
+        console.log('Inventory fetched:', inventory.length, 'items');
+      } else {
+        console.warn('Inventory API response not ok:', inventoryRes.status);
       }
 
       setDashboardData({
@@ -63,6 +84,8 @@ export const DashboardProvider = ({ children }) => {
         error: null,
         lastUpdated: new Date()
       });
+
+      console.log('Dashboard data updated successfully at:', new Date().toLocaleTimeString());
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

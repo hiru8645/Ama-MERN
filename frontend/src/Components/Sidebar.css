@@ -1,6 +1,6 @@
 /* Sidebar.css */
 .sidebar {
-  width: 180px; /* Increased width for better balance */
+  width: 250px; /* Match PanelLayout sidebar width */
   height: 100vh;
   background-color: #1e1e2f;
   color: #ffffff;

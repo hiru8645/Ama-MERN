@@ -1,7 +1,11 @@
 import React, { useEffect } from "react";
 import "./Home.css";
+import { useAuth } from '../contexts/AuthContext';
+import { isInventoryManager, hasPermission } from '../utils/roleUtils';
 
 const Home = ({ setCurrentPage }) => {
+  const { user, isLoggedIn, logout } = useAuth();
+  
   useEffect(() => {
     // Smooth scrolling
     const anchors = document.querySelectorAll('a[href^="#"]');
@@ -13,30 +17,52 @@ const Home = ({ setCurrentPage }) => {
       }
     };
     anchors.forEach((a) => a.addEventListener("click", handleClick));
-
-    // Navbar scroll effect
-    const navbar = document.querySelector('.navbar');
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        navbar.classList.add('navbar-scrolled');
-      } else {
-        navbar.classList.remove('navbar-scrolled');
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
     
     return () => {
       anchors.forEach((a) => a.removeEventListener("click", handleClick));
-      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
-  const handleInventoryPanelClick = (e) => {
-    e.preventDefault();
-    if (setCurrentPage) {
-      setCurrentPage('dashboard');
+  const handlePanelClick = (panelName, authMode = null) => {
+    // Special handling for inventory access - only inventory managers allowed
+    if (panelName === 'inventory') {
+      if (!isLoggedIn) {
+        alert('Please log in first to access Inventory Management.');
+        return;
+      }
+      if (!isInventoryManager(user) && !hasPermission(user, 'access_inventory')) {
+        alert('Access Denied: Only Inventory Managers can access the Inventory Panel.\n\nContact: ransharipremarathna@gmail.com');
+        return;
+      }
     }
+    
+    if (setCurrentPage) {
+      setCurrentPage(panelName);
+      // Store the auth mode in sessionStorage for UserPanel to pick up
+      if (authMode) {
+        sessionStorage.setItem('authMode', authMode);
+        // Dispatch custom event to notify UserPanel
+        window.dispatchEvent(new Event('authModeChanged'));
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    // Stay on home page after logout
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const getDisplayName = (userName) => {
+    if (!userName) return 'User';
+    // For mobile screens, show first name only
+    return userName.split(' ')[0];
   };
 
   return (
@@ -51,12 +77,44 @@ const Home = ({ setCurrentPage }) => {
             </div>
             <ul className="nav-links">
               <li><a href="#home">Home</a></li>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#about">About Us</a></li>
-              <li><a href="#contact">Contact Us</a></li>
-              <li><a href="#inventory" className="btn-inventory" onClick={handleInventoryPanelClick}>Inventory Panel</a></li>
-              <li><a href="#login" className="btn-login">Login</a></li>
-              <li><a href="#signup" className="btn-primary">Sign Up</a></li>
+              <li className="dropdown">
+                <a href="#features" className="dropdown-toggle">
+                  Features <span className="dropdown-arrow">▼</span>
+                </a>
+                <ul className="dropdown-menu">
+                  <li><a href="#user" onClick={(e) => { e.preventDefault(); handlePanelClick('user'); }}>👥 User Management</a></li>
+                  <li><a href="#order" onClick={(e) => { e.preventDefault(); handlePanelClick('order'); }}>📊 Order Management</a></li>
+                  <li><a href="#finance" onClick={(e) => { e.preventDefault(); handlePanelClick('finance'); }}>💰 Finance Management</a></li>
+                  <li>
+                    <a 
+                      href="#inventory" 
+                      onClick={(e) => { e.preventDefault(); handlePanelClick('inventory'); }}
+                      className={isLoggedIn && isInventoryManager(user) ? 'accessible' : 'restricted'}
+                      title={isLoggedIn && isInventoryManager(user) ? 'Access Inventory Management' : 'Inventory Manager Access Only'}
+                    >
+                      📦 Inventory Management {!isLoggedIn || !isInventoryManager(user) ? '🔒' : ''}
+                    </a>
+                  </li>
+                  <li><a href="#helpdesk" onClick={(e) => { e.preventDefault(); handlePanelClick('helpdesk'); }}>🎧 Support System</a></li>
+                </ul>
+              </li>
+              <li><a href="#about" onClick={(e) => { e.preventDefault(); handlePanelClick('about'); }}>About Us</a></li>
+              <li><a href="#contact" onClick={(e) => { e.preventDefault(); handlePanelClick('contact'); }}>Contact Us</a></li>
+              {isLoggedIn ? (
+                <>
+                  <li className="user-greeting">
+                    <span className="greeting-text">
+                      {getGreeting()}, {getDisplayName(user?.full_name || user?.name)}! 👋
+                    </span>
+                  </li>
+                  <li><a href="#logout" className="btn-logout" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Logout</a></li>
+                </>
+              ) : (
+                <>
+                  <li><a href="#login" className="btn-login" onClick={(e) => { e.preventDefault(); handlePanelClick('user', 'login'); }}>Login</a></li>
+                  <li><a href="#signup" className="btn-primary" onClick={(e) => { e.preventDefault(); handlePanelClick('user', 'register'); }}>Sign Up</a></li>
+                </>
+              )}
             </ul>
           </div>
         </nav>

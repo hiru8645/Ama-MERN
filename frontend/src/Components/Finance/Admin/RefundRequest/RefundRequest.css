@@ -1,0 +1,68 @@
+.refunds-page {
+  min-height: 100vh;
+  width: 100%;
+  background-image: url("../../../../assets/images/bg.jpg"); /* same as payment page */
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.refunds-container {
+  width: 100%;
+  max-width: 900px;
+  background: rgba(255, 255, 255, 0.95); /* slightly transparent white to see bg */
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.refunds-container h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #0d6efd;
+}
+
+.refund-card {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 15px;
+  background: #fff; /* keep cards white for readability */
+}
+
+.refund-card p {
+  margin: 5px 0;
+}
+
+.actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.actions button:nth-child(1) {
+  background: #28a745;
+  color: white;
+}
+
+.actions button:nth-child(2) {
+  background: #dc3545;
+  color: white;
+}
+
+.actions button:nth-child(3) {
+  background: #6c757d;
+  color: white;
+}

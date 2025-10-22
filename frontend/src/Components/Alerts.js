@@ -1,1091 +1,768 @@
-import React, { useState, useEffect, useCallback } from "react";
-import "./Alerts.css";
+import React, { useState, useEffect } from 'react';
+import { 
+  FaBell, 
+  FaExclamationTriangle, 
+  FaTimesCircle, 
+  FaTimes, 
+  FaSyncAlt, 
+  FaBox, 
+  FaCog,
+  FaSearch,
+  FaFilter,
+  FaChartLine,
+  FaWarehouse,
+  FaEye,
+  FaHistory,
+  FaDownload,
+  FaBolt,
+  FaShoppingCart,
+  FaCalendarAlt,
+  FaUser,
+  FaBookOpen
+} from 'react-icons/fa';
+import { useInventory } from '../contexts/InventoryContext';
+import './Alerts.css';
 
-const initialBooks = [
-  { 
-    id: 1, 
-    title: "Object Oriented Programming with C++", 
-    author: "Balagurusamy", 
-    category: "Programming", 
-    stock: 0, // OUT OF STOCK for testing
-    threshold: 15, 
-    price: 38.50, 
-    supplier: "CodePress", 
-    lastRestocked: "2024-02-10",
-    finePerDay: 20.00,
-    borrowedCopies: [],
-    maxBorrowDays: 14
-  },
-  { 
-    id: 2, 
-    title: "Marketing Management", 
-    author: "Philip Kotler", 
-    category: "Business", 
-    stock: 25, 
-    threshold: 10, 
-    price: 52.75, 
-    supplier: "Business Books Inc", 
-    lastRestocked: "2024-03-01",
-    finePerDay: 20.00,
-    borrowedCopies: [],
-    maxBorrowDays: 14
-  },
-  { 
-    id: 3, 
-    title: "Calculus: Early Transcendentals", 
-    author: "James Stewart", 
-    category: "Mathematics", 
-    stock: 3, // CRITICAL for testing (threshold/3 = 20/3 = 6.67, so 3 < 6.67)
-    threshold: 20, 
-    price: 67.99, 
-    supplier: "Math Publishers", 
-    lastRestocked: "2024-02-28",
-    finePerDay: 20.00,
-    borrowedCopies: [],
-    maxBorrowDays: 14
-  },
-  { 
-    id: 4, 
-    title: "Database Management Systems", 
-    author: "Ramez Elmasri", 
-    category: "Computer Science", 
-    stock: 8, // LOW for testing (threshold = 15, so 8 <= 15)
-    threshold: 15, 
-    price: 45.00, 
-    supplier: "Tech Books Ltd", 
-    lastRestocked: "2024-03-05",
-    finePerDay: 20.00,
-    borrowedCopies: [],
-    maxBorrowDays: 14
-  },
-  { 
-    id: 5, 
-    title: "Introduction to Algorithms", 
-    author: "Thomas Cormen", 
-    category: "Computer Science", 
-    stock: 6, // VERY LOW for testing (threshold/2 = 12/2 = 6, so 6 <= 6)
-    threshold: 12, 
-    price: 89.95, 
-    supplier: "Algorithm Press", 
-    lastRestocked: "2024-02-20",
-    finePerDay: 20.00,
-    borrowedCopies: [],
-    maxBorrowDays: 14
-  },
-];
+const Alerts = ({ setCurrentPage, setSidebarActive }) => {
+  const { 
+    alerts, 
+    inventory,
+    lastUpdated,
+    dismissAlert,
+    clearAllAlerts,
+    syncWithProducts,
+    getStockStatus
+  } = useInventory();
 
-const Alerts = () => {
-  const [books, setBooks] = useState(initialBooks);
-  const [showModal, setShowModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showBulkModal, setShowBulkModal] = useState(false);
-  const [showFineModal, setShowFineModal] = useState(false);
-  const [selectedBorrower, setSelectedBorrower] = useState(null);
-  const [fineAmount, setFineAmount] = useState(0);
-  const [selectedBook, setSelectedBook] = useState(null);
-  const [restockAmount, setRestockAmount] = useState(0);
-  const [supplier, setSupplier] = useState("");
-  const [notification, setNotification] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchField, setSearchField] = useState("title");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("title");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [bulkRestockAmount, setBulkRestockAmount] = useState(10);
-  const [bulkSupplier, setBulkSupplier] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(30);
-  const [globalThreshold, setGlobalThreshold] = useState(10);
-  const [editBook, setEditBook] = useState({});
+  const [refreshInterval, setRefreshInterval] = useState(15); // Reduced to 15 seconds for more frequent updates
+  const [showSettings, setShowSettings] = useState(false);
+  const [notification, setNotification] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [sortBy, setSortBy] = useState("priority");
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // Helper functions (defined first to avoid temporal dead zone)
-  const getStatus = (stock, threshold) => {
-    if (stock === 0) return "out-of-stock";
-    if (stock <= threshold / 3) return "critical";
-    if (stock <= threshold / 2) return "very-low";
-    if (stock <= threshold) return "low";
-    return "safe";
-  };
-
-  const checkCriticalStock = useCallback(() => {
-    const outOfStockBooks = books.filter(book => getStatus(book.stock, book.threshold) === "out-of-stock");
-    const criticalBooks = books.filter(book => getStatus(book.stock, book.threshold) === "critical");
-    const veryLowBooks = books.filter(book => getStatus(book.stock, book.threshold) === "very-low");
-    
-    // Create array of alert objects for multiple notifications
-    const alerts = [];
-    
-    // Add out-of-stock alerts
-    outOfStockBooks.forEach(book => {
-      alerts.push({
-        id: `out-of-stock-${book.id}`,
-        type: 'out-of-stock',
-        message: `"${book.title}" by ${book.author} is currently OUT OF STOCK and requires immediate restocking.`,
-        book: book,
-        priority: 1
-      });
-    });
-    
-    // Add critical stock alerts
-    criticalBooks.forEach(book => {
-      alerts.push({
-        id: `critical-${book.id}`,
-        type: 'critical',
-        message: `"${book.title}" by ${book.author} has reached CRITICAL stock level (${book.stock} units remaining).`,
-        book: book,
-        priority: 2
-      });
-    });
-    
-    // Add very low stock alerts (limit to 3 to avoid overwhelming UI)
-    veryLowBooks.slice(0, 3).forEach(book => {
-      alerts.push({
-        id: `very-low-${book.id}`,
-        type: 'very-low',
-        message: `"${book.title}" by ${book.author} has very low stock (${book.stock} units remaining).`,
-        book: book,
-        priority: 3
-      });
-    });
-    
-    // Sort by priority and set alerts
-    setLowStockAlerts(alerts.sort((a, b) => a.priority - b.priority));
-  }, [books]);  // Auto-refresh functionality
+  // Auto refresh inventory data
   useEffect(() => {
-    let interval;
     if (autoRefresh) {
-      interval = setInterval(() => {
-        checkCriticalStock();
+      const interval = setInterval(async () => {
+        const previousAlertCount = alerts.length;
+        setRefreshing(true);
+        
+        try {
+          await syncWithProducts();
+          
+          // Check if alerts have changed after a brief delay to allow context updates
+          setTimeout(() => {
+            const currentAlertCount = alerts.length;
+            if (currentAlertCount !== previousAlertCount) {
+              showNotification(`🔔 Alerts updated: ${currentAlertCount} active alerts`);
+            }
+          }, 1000);
+          
+        } catch (error) {
+          console.error('Auto-refresh failed:', error);
+        } finally {
+          setRefreshing(false);
+        }
       }, refreshInterval * 1000);
+      
+      return () => clearInterval(interval);
     }
-    return () => {
-      if (interval) clearInterval(interval);
+  }, [autoRefresh, refreshInterval, syncWithProducts, alerts.length]);
+
+  // Monitor inventory changes and trigger refresh when needed
+  useEffect(() => {
+    // This will trigger when inventory or alerts change from context
+    if (inventory.length > 0) {
+      console.log('Inventory updated, alerts should refresh automatically');
+    }
+  }, [inventory, alerts]);
+
+  // Initial refresh on component mount
+  useEffect(() => {
+    // Force refresh when component loads
+    const performInitialRefresh = async () => {
+      setRefreshing(true);
+      try {
+        await syncWithProducts();
+        showNotification("🔄 Alerts page loaded - inventory synchronized");
+      } catch (error) {
+        console.error('Initial refresh failed:', error);
+        showNotification("⚠️ Warning: Failed to sync with latest inventory data");
+      } finally {
+        setRefreshing(false);
+      }
     };
-  }, [books, autoRefresh, refreshInterval, checkCriticalStock]);
-
-  // Check critical stock on component mount and when books change
-  useEffect(() => {
-    checkCriticalStock();
-  }, [checkCriticalStock]);
-
-  // Load data from localStorage on component mount
-  useEffect(() => {
-    const savedBooks = localStorage.getItem('alertsBooks');
-    const savedSettings = localStorage.getItem('alertsSettings');
     
-    if (savedBooks) {
-      try {
-        setBooks(JSON.parse(savedBooks));
-      } catch (error) {
-        console.error('Error loading saved books:', error);
-      }
-    }
-    
-    if (savedSettings) {
-      try {
-        const settings = JSON.parse(savedSettings);
-        setAutoRefresh(settings.autoRefresh ?? true);
-        setRefreshInterval(settings.refreshInterval ?? 30);
-        setGlobalThreshold(settings.globalThreshold ?? 10);
-      } catch (error) {
-        console.error('Error loading saved settings:', error);
-      }
-    }
-  }, []);
+    performInitialRefresh();
+  }, [syncWithProducts]); // Include syncWithProducts dependency
 
-  // Save data to localStorage whenever books change
-  useEffect(() => {
-    localStorage.setItem('alertsBooks', JSON.stringify(books));
-  }, [books]);
-
-  // Notification logic
-  const [lowStockNotification, setLowStockNotification] = useState("");
-  const [lowStockAlerts, setLowStockAlerts] = useState([]);
-  
-  const showNotification = (message, type = "success") => {
-    if (type === "low-stock") {
-      setLowStockNotification(message);
-      setTimeout(() => setLowStockNotification(""), 7000);
-    } else {
-      setNotification(message);
-      setTimeout(() => setNotification(""), 5000);
-    }
-  };
-  
-  const dismissAlert = (alertId) => {
-    setLowStockAlerts(prev => prev.filter(alert => alert.id !== alertId));
+  const showNotification = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(""), 5000);
   };
 
-  const openRestockModal = (book) => {
-    setSelectedBook(book);
-    setRestockAmount(Math.max(book.threshold - book.stock, 1));
-    setSupplier(book.supplier || "");
-    setShowModal(true);
-  };
-
-  const openEditModal = (book) => {
-    setEditBook({...book});
-    setShowEditModal(true);
-  };
-
-  const openBulkRestockModal = () => {
-    const lowStockBooks = books.filter(book => getStatus(book.stock, book.threshold) !== "safe");
-    if (lowStockBooks.length === 0) {
-      showNotification("ℹ️ No books need restocking!", "info");
-      return;
-    }
-    setBulkRestockAmount(10);
-    setBulkSupplier("");
-    setShowBulkModal(true);
-  };
-
-  const handleRestockSubmit = (e) => {
-    e.preventDefault();
-    const amount = parseInt(restockAmount);
-    
-    if (amount <= 0) {
-      showNotification("⚠️ Restock amount must be greater than 0!", "warning");
-      return;
-    }
-
-    const updatedBooks = books.map((book) =>
-      book.id === selectedBook.id
-        ? { 
-            ...book, 
-            stock: book.stock + amount,
-            lastRestocked: new Date().toISOString().split('T')[0],
-            supplier: supplier.trim()
-          }
-        : book
-    );
-    
-    setBooks(updatedBooks);
-    setShowModal(false);
-    showNotification(`✅ "${selectedBook.title}" restocked with ${amount} units from ${supplier}!`);
-  };
-
-  const handleBulkRestock = (e) => {
-    e.preventDefault();
-    const amount = parseInt(bulkRestockAmount);
-    
-    if (amount <= 0) {
-      showNotification("⚠️ Bulk restock amount must be greater than 0!", "warning");
-      return;
-    }
-
-    const lowStockBooks = books.filter(book => getStatus(book.stock, book.threshold) !== "safe");
-    
-    const updatedBooks = books.map((book) => {
-      const status = getStatus(book.stock, book.threshold);
-      if (status !== "safe") {
-        return {
-          ...book,
-          stock: book.stock + amount,
-          lastRestocked: new Date().toISOString().split('T')[0],
-          supplier: bulkSupplier.trim()
-        };
-      }
-      return book;
-    });
-    
-    setBooks(updatedBooks);
-    setShowBulkModal(false);
-    showNotification(`🔄 Bulk restocked ${lowStockBooks.length} books with ${amount} units each!`);
-  };
-
-  const handleEditBook = (e) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!editBook.title.trim() || !editBook.author.trim() || !editBook.category.trim()) {
-      showNotification("⚠️ Please fill in all required fields!", "warning");
-      return;
-    }
-
-    const stock = parseInt(editBook.stock);
-    const threshold = parseInt(editBook.threshold);
-    const price = parseFloat(editBook.price);
-
-    if (stock < 0 || threshold <= 0 || price < 0) {
-      showNotification("⚠️ Please enter valid numbers for stock, threshold, and price!", "warning");
-      return;
-    }
-
-    const updatedBooks = books.map((book) =>
-      book.id === editBook.id
-        ? { 
-            ...editBook,
-            title: editBook.title.trim(),
-            author: editBook.author.trim(),
-            category: editBook.category.trim(),
-            supplier: editBook.supplier?.trim() || "",
-            stock,
-            threshold,
-            price
-          }
-        : book
-    );
-    
-    setBooks(updatedBooks);
-    setShowEditModal(false);
-    showNotification(`📝 "${editBook.title}" updated successfully!`);
-  };
-
-  const deleteBook = (bookId) => {
-    const bookToDelete = books.find(book => book.id === bookId);
-    if (window.confirm(`Are you sure you want to delete "${bookToDelete.title}"?\n\nThis action cannot be undone.`)) {
-      setBooks(books.filter(book => book.id !== bookId));
-      showNotification(`🗑️ "${bookToDelete.title}" deleted successfully!`);
-    }
-  };
-
-  const clearAllFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-    setSortBy("title");
-    setSortOrder("asc");
-    setSearchField("title");
-  };
-
-  // Enhanced filtering and sorting
-  const processedBooks = books
-    .filter((book) => {
-      const status = getStatus(book.stock, book.threshold);
-      const statusMatch = statusFilter === "all" || status === statusFilter;
-      const query = searchQuery.toLowerCase().trim();
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Force a complete refresh of inventory data
+      await syncWithProducts();
       
-      if (!query) return statusMatch;
+      // Clear any cached data
+      localStorage.removeItem('inventory');
       
-      let searchMatch = true;
-      switch (searchField) {
-        case "title": searchMatch = book.title.toLowerCase().includes(query); break;
-        case "author": searchMatch = book.author.toLowerCase().includes(query); break;
-        case "category": searchMatch = book.category.toLowerCase().includes(query); break;
-        case "stock": searchMatch = book.stock.toString().includes(query); break;
-        case "status": searchMatch = status.includes(query); break;
-        case "supplier": searchMatch = book.supplier?.toLowerCase().includes(query) || false; break;
-        default: 
-          // Global search across all fields
-          searchMatch = book.title.toLowerCase().includes(query) ||
-                       book.author.toLowerCase().includes(query) ||
-                       book.category.toLowerCase().includes(query) ||
-                       book.supplier?.toLowerCase().includes(query) ||
-                       status.includes(query);
-      }
+      // Wait a moment for the context to update
+      setTimeout(() => {
+        showNotification(`✅ Inventory data refreshed at ${new Date().toLocaleTimeString()}`);
+      }, 500);
       
-      return statusMatch && searchMatch;
-    })
-    .sort((a, b) => {
-      let aVal, bVal;
-      switch (sortBy) {
-        case "stock": aVal = a.stock; bVal = b.stock; break;
-        case "threshold": aVal = a.threshold; bVal = b.threshold; break;
-        case "price": aVal = a.price; bVal = b.price; break;
-        case "status": 
-          const statusOrder = {"out-of-stock": 0, "critical": 1, "very-low": 2, "low": 3, "safe": 4};
-          aVal = statusOrder[getStatus(a.stock, a.threshold)]; 
-          bVal = statusOrder[getStatus(b.stock, b.threshold)]; 
-          break;
-        case "lastRestocked": 
-          aVal = new Date(a.lastRestocked); 
-          bVal = new Date(b.lastRestocked); 
-          break;
-        case "value":
-          aVal = a.stock * a.price;
-          bVal = b.stock * b.price;
-          break;
-        default: 
-          aVal = a[sortBy]?.toString().toLowerCase() || ""; 
-          bVal = b[sortBy]?.toString().toLowerCase() || "";
-      }
-      
-      if (typeof aVal === 'string') {
-        return sortOrder === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      }
-      return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
-    });
+    } catch (error) {
+      console.error('Refresh error:', error);
+      showNotification("❌ Failed to refresh inventory data - check network connection");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
-  // Statistics calculations
-  const getTotalValue = () => {
-    return books.reduce((total, book) => total + (book.stock * book.price), 0).toFixed(2);
+  const getAlertStyle = (type) => {
+    switch (type) {
+      case 'out-of-stock':
+        return 'alert-critical';
+      case 'critical':
+        return 'alert-critical';
+      case 'very-low':
+        return 'alert-warning';
+      case 'low':
+        return 'alert-info';
+      default:
+        return 'alert-info';
+    }
+  };
+
+  const getAlertIcon = (type) => {
+    switch (type) {
+      case 'out-of-stock':
+        return <FaTimesCircle />;
+      case 'critical':
+        return <FaExclamationTriangle />;
+      case 'very-low':
+        return <FaExclamationTriangle />;
+      case 'low':
+        return <FaBell />;
+      default:
+        return <FaBell />;
+    }
   };
 
   const getCriticalCount = () => {
-    return books.filter(book => getStatus(book.stock, book.threshold) === "critical").length;
+    return inventory.filter(item => getStockStatus(item.stock, item.threshold) === "critical").length;
   };
 
   const getOutOfStockCount = () => {
-    return books.filter(book => getStatus(book.stock, book.threshold) === "out-of-stock").length;
+    return inventory.filter(item => getStockStatus(item.stock, item.threshold) === "out-of-stock").length;
   };
 
-  const getLowStockCount = () => {
-    return books.filter(book => {
-      const status = getStatus(book.stock, book.threshold);
-      return status === "low" || status === "very-low";
+  const getTotalLowStockCount = () => {
+    return inventory.filter(item => {
+      const status = getStockStatus(item.stock, item.threshold);
+      return status === "out-of-stock" || status === "critical" || status === "very-low" || status === "low";
     }).length;
   };
 
-  const getTotalStock = () => {
-    return books.reduce((total, book) => total + book.stock, 0);
-  };
+  // Filter and sort alerts
+  const getFilteredAlerts = () => {
+    let filtered = alerts;
 
-  const getAveragePrice = () => {
-    if (books.length === 0) return 0;
-    return (books.reduce((total, book) => total + book.price, 0) / books.length).toFixed(2);
-  };
-
-  // Fine Management Functions
-  // Calculates fine for late submission
-  const calculateFine = (borrowDate, dueDate, returnDate, finePerDay = 20) => {
-    // Dates as YYYY-MM-DD
-    const due = new Date(dueDate);
-    const returned = new Date(returnDate);
-    // Calculate days overdue based on actual due date
-    const lateDays = Math.max(0, Math.ceil((returned - due) / (1000 * 60 * 60 * 24)));
-    if (lateDays > 0) {
-      return lateDays * finePerDay;
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(alert => 
+        alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        alert.item?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        alert.item?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
-    return 0;
-  };
 
-  // eslint-disable-next-line no-unused-vars
-  const handleBorrowBook = (bookId, borrower) => {
-    setBooks(prevBooks => prevBooks.map(book => {
-      if (book.id === bookId) {
-        return {
-          ...book,
-          stock: book.stock - 1,
-          borrowedCopies: [...book.borrowedCopies, {
-            borrowerId: borrower.id,
-            borrowerName: borrower.name,
-            borrowDate: new Date().toISOString(),
-            dueDate: new Date(Date.now() + (book.maxBorrowDays * 24 * 60 * 60 * 1000)).toISOString(),
-            returned: false
-          }]
-        };
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter(alert => alert.type === filterType);
+    }
+
+    // Sort alerts
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "priority":
+          return a.priority - b.priority;
+        case "name":
+          return (a.item?.name || a.item?.title || "").localeCompare(b.item?.name || b.item?.title || "");
+        case "stock":
+          return (a.item?.stock || 0) - (b.item?.stock || 0);
+        case "timestamp":
+          return new Date(b.timestamp) - new Date(a.timestamp);
+        default:
+          return 0;
       }
-      return book;
-    }));
-    showNotification(`Book borrowed by ${borrower.name}`);
+    });
+
+    return filtered;
   };
 
-  // eslint-disable-next-line no-unused-vars
-  const handleReturnBook = (bookId, borrowerId) => {
-    const book = books.find(b => b.id === bookId);
-    const borrowedCopy = book.borrowedCopies.find(copy => 
-      copy.borrowerId === borrowerId && !copy.returned
-    );
-
-    if (!borrowedCopy) return;
-
-    const fine = calculateFine(
-      borrowedCopy.borrowDate,
-      borrowedCopy.dueDate,
-      new Date().toISOString(),
-      book.finePerDay
-    );
-
-    if (fine > 0) {
-      setSelectedBorrower({ ...borrowedCopy, fine, bookId });
-      setFineAmount(fine);
-      setShowFineModal(true);
-    } else {
-      completeReturn(bookId, borrowerId);
+  const getAlertBadgeContent = (type) => {
+    switch (type) {
+      case 'out-of-stock':
+        return { text: 'URGENT', color: '#dc2626' };
+      case 'critical':
+        return { text: 'HIGH', color: '#ea580c' };
+      case 'very-low':
+        return { text: 'MEDIUM', color: '#d97706' };
+      case 'low':
+        return { text: 'LOW', color: '#0891b2' };
+      default:
+        return { text: 'INFO', color: '#6b7280' };
     }
   };
 
-  const completeReturn = (bookId, borrowerId) => {
-    setBooks(prevBooks => prevBooks.map(book => {
-      if (book.id === bookId) {
-        return {
-          ...book,
-          stock: book.stock + 1,
-          borrowedCopies: book.borrowedCopies.map(copy => {
-            if (copy.borrowerId === borrowerId && !copy.returned) {
-              return { ...copy, returned: true, returnDate: new Date().toISOString() };
-            }
-            return copy;
-          })
-        };
-      }
-      return book;
-    }));
+  const getProgressPercentage = (current, threshold) => {
+    if (!threshold) return 0;
+    return Math.min((current / threshold) * 100, 100);
   };
 
-  const handleFinePayment = () => {
-    completeReturn(selectedBorrower.bookId, selectedBorrower.borrowerId);
-    showNotification(`Fine of $${fineAmount} collected from ${selectedBorrower.borrowerName}`);
-    setShowFineModal(false);
-    setSelectedBorrower(null);
-    setFineAmount(0);
+  const getStockLevelText = (stock, threshold) => {
+    const status = getStockStatus(stock, threshold);
+    switch (status) {
+      case 'out-of-stock':
+        return 'Out of Stock';
+      case 'critical':
+        return 'Critically Low';
+      case 'very-low':
+        return 'Very Low Stock';
+      case 'low':
+        return 'Low Stock';
+      default:
+        return 'Adequate Stock';
+    }
+  };
+
+  const handleAlertClick = (alert) => {
+    setSelectedAlert(alert);
+    setShowDetailModal(true);
+  };
+
+  const downloadReport = () => {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      totalAlerts: alerts.length,
+      outOfStock: getOutOfStockCount(),
+      critical: getCriticalCount(),
+      totalLowStock: getTotalLowStockCount(),
+      alerts: alerts.map(alert => ({
+        type: alert.type,
+        item: alert.item?.name || alert.item?.title,
+        stock: alert.item?.stock,
+        threshold: alert.item?.threshold,
+        message: alert.message,
+        timestamp: alert.timestamp
+      }))
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(report, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `inventory-alerts-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    showNotification("Alert report downloaded successfully!");
   };
 
   return (
-    <div className="alerts-page">
-      {/* Main notification */}
-      {notification && (
-        <div className={`notification ${notification.includes("⚠️") || notification.includes("🚨") || notification.includes("❌") ? "warning" : "success"}`}>
-          {notification}
+    <div className="alerts-container">
+      {/* Enhanced Header with Gradient Background */}
+      <div className="alerts-header">
+        <div className="header-left">
+          <div className="header-title-section">
+            <div className="title-with-badge">
+              <h2>
+                <FaBell className="page-icon pulse" />
+                Inventory Alert Center
+              </h2>
+              {alerts.length > 0 && (
+                <span className="alert-count-badge">{alerts.length}</span>
+              )}
+            </div>
+            <div className="header-meta">
+              <span className="last-updated">
+                <FaCalendarAlt className="meta-icon" />
+                Last updated: {new Date(lastUpdated).toLocaleString()}
+              </span>
+              <span className="status-indicator">
+                <div className={`status-dot ${alerts.length > 0 ? 'active' : 'inactive'}`}></div>
+                {alerts.length > 0 ? 'Active Alerts' : 'All Clear'}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="header-right">
+          <div className="header-actions">
+            <button 
+              className="action-btn download-btn"
+              onClick={downloadReport}
+              title="Download Report"
+            >
+              <FaDownload />
+            </button>
+            <button 
+              className="action-btn filter-btn"
+              onClick={() => setShowFilters(!showFilters)}
+              title="Toggle Filters"
+            >
+              <FaFilter />
+            </button>
+            <button 
+              className={`action-btn refresh-btn ${refreshing ? 'refreshing' : ''}`}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Refresh Data"
+            >
+              <FaSyncAlt className={refreshing ? 'spinning' : ''} />
+            </button>
+            <button 
+              className="action-btn settings-btn"
+              onClick={() => setShowSettings(!showSettings)}
+              title="Settings"
+            >
+              <FaCog />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Settings Panel */}
+      {showSettings && (
+        <div className="settings-panel enhanced">
+          <div className="settings-header">
+            <h3><FaCog className="settings-icon" /> Alert Configuration</h3>
+            <button className="close-settings" onClick={() => setShowSettings(false)}>
+              <FaTimes />
+            </button>
+          </div>
+          <div className="settings-grid">
+            <div className="setting-group">
+              <label className="setting-label">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                />
+                <span className="checkmark"></span>
+                Auto-refresh enabled
+              </label>
+              <p className="setting-description">Automatically refresh inventory data</p>
+            </div>
+            <div className="setting-group">
+              <label className="setting-label">Refresh interval</label>
+              <div className="slider-container">
+                <input
+                  type="range"
+                  min="10"
+                  max="300"
+                  value={refreshInterval}
+                  onChange={(e) => setRefreshInterval(parseInt(e.target.value))}
+                  className="slider"
+                />
+                <span className="slider-value">{refreshInterval}s</span>
+              </div>
+            </div>
+            <div className="setting-group">
+              <label className="setting-label">View Mode</label>
+              <div className="view-mode-toggle">
+                <button 
+                  className={`mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                  onClick={() => setViewMode('grid')}
+                >
+                  Grid
+                </button>
+                <button 
+                  className={`mode-btn ${viewMode === 'list' ? 'active' : ''}`}
+                  onClick={() => setViewMode('list')}
+                >
+                  List
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-      {/* Enhanced Low stock notification area */}
-      {/* Multiple Alerts Display */}
-      {lowStockAlerts.length > 0 && (
-        <div className="alerts-list">
-          {lowStockAlerts.map((alert) => (
-            <div 
-              key={alert.id} 
-              className={`low-stock-notification ${alert.type}`}
-            >
-              <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                <span role="img" aria-label="warning">
-                  {alert.type === "out-of-stock" ? "🚨" : 
-                   alert.type === "critical" ? "⚠️" : 
-                   alert.type === "very-low" ? "📉" : "ℹ️"}
-                </span> 
-                <span>
-                  {alert.message}
+
+      {/* Enhanced Filter Panel */}
+      {showFilters && (
+        <div className="filters-panel">
+          <div className="filters-header">
+            <h4><FaFilter className="filter-icon" /> Filter & Search</h4>
+          </div>
+          <div className="filters-content">
+            <div className="search-container">
+              <FaSearch className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search alerts by item name or message..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+            </div>
+            <div className="filter-controls">
+              <select 
+                value={filterType} 
+                onChange={(e) => setFilterType(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Types</option>
+                <option value="out-of-stock">Out of Stock</option>
+                <option value="critical">Critical</option>
+                <option value="very-low">Very Low</option>
+                <option value="low">Low Stock</option>
+              </select>
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                className="sort-select"
+              >
+                <option value="priority">Sort by Priority</option>
+                <option value="name">Sort by Name</option>
+                <option value="stock">Sort by Stock Level</option>
+                <option value="timestamp">Sort by Time</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Summary Dashboard */}
+      <div className="alert-dashboard">
+        <div className="summary-grid">
+          <div className="summary-card critical enhanced">
+            <div className="card-icon">
+              <FaTimesCircle />
+            </div>
+            <div className="card-content">
+              <div className="card-number">{getOutOfStockCount()}</div>
+              <div className="card-label">Out of Stock</div>
+              <div className="card-trend">
+                <FaBolt className="trend-icon" />
+                Requires immediate action
+              </div>
+            </div>
+            <div className="card-progress">
+              <div className="progress-bar critical" style={{width: getOutOfStockCount() > 0 ? '100%' : '0%'}}></div>
+            </div>
+          </div>
+
+          <div className="summary-card warning enhanced">
+            <div className="card-icon">
+              <FaExclamationTriangle />
+            </div>
+            <div className="card-content">
+              <div className="card-number">{getCriticalCount()}</div>
+              <div className="card-label">Critical Stock</div>
+              <div className="card-trend">
+                <FaChartLine className="trend-icon" />
+                Restock recommended
+              </div>
+            </div>
+            <div className="card-progress">
+              <div className="progress-bar warning" style={{width: getCriticalCount() > 0 ? '75%' : '0%'}}></div>
+            </div>
+          </div>
+
+          <div className="summary-card info enhanced">
+            <div className="card-icon">
+              <FaWarehouse />
+            </div>
+            <div className="card-content">
+              <div className="card-number">{getTotalLowStockCount()}</div>
+              <div className="card-label">Total Alerts</div>
+              <div className="card-trend">
+                <FaHistory className="trend-icon" />
+                Monitor closely
+              </div>
+            </div>
+            <div className="card-progress">
+              <div className="progress-bar info" style={{width: getTotalLowStockCount() > 0 ? '50%' : '0%'}}></div>
+            </div>
+          </div>
+
+          <div className="summary-card success enhanced">
+            <div className="card-icon">
+              <FaBookOpen />
+            </div>
+            <div className="card-content">
+              <div className="card-number">{inventory.length}</div>
+              <div className="card-label">Total Items</div>
+              <div className="card-trend">
+                <FaUser className="trend-icon" />
+                Inventory overview
+              </div>
+            </div>
+            <div className="card-progress">
+              <div className="progress-bar success" style={{width: '100%'}}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Alerts Content */}
+      <div className="alerts-content">
+        {getFilteredAlerts().length === 0 ? (
+          <div className="no-alerts enhanced">
+            <div className="no-alerts-illustration">
+              <FaBox className="no-alerts-icon" />
+              <div className="success-rings">
+                <div className="ring ring-1"></div>
+                <div className="ring ring-2"></div>
+                <div className="ring ring-3"></div>
+              </div>
+            </div>
+            <h3>All Systems Green!</h3>
+            <p>No active alerts at this time. Your inventory levels are properly maintained.</p>
+            <div className="no-alerts-stats">
+              <span className="stat-item">
+                <FaWarehouse className="stat-icon" />
+                {inventory.length} items monitored
+              </span>
+              <span className="stat-item">
+                <FaChartLine className="stat-icon" />
+                System healthy
+              </span>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="alerts-actions enhanced">
+              <div className="actions-left">
+                <span className="alert-count">
+                  <FaBell className="count-icon" />
+                  {getFilteredAlerts().length} of {alerts.length} alerts
+                  {searchTerm && (
+                    <span className="search-info">matching "{searchTerm}"</span>
+                  )}
                 </span>
               </div>
-              
-              <div className="alert-actions">
+              <div className="actions-right">
                 <button 
-                  className="alert-action-btn"
-                  onClick={() => openRestockModal(alert.book)}
-                  title="Restock this item"
+                  className="action-btn clear-all-btn"
+                  onClick={clearAllAlerts}
+                  title="Clear All Alerts"
                 >
-                  Restock Now
-                </button>
-                <button 
-                  className="dismiss-btn"
-                  onClick={() => dismissAlert(alert.id)}
-                  title="Dismiss alert"
-                >
-                  ✕
+                  <FaTimes className="btn-icon" />
+                  Clear All
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Legacy single notification (keeping for backward compatibility) */}
-      {lowStockNotification && lowStockAlerts.length === 0 && (
-        <div className={`low-stock-notification ${
-          lowStockNotification.includes("OUT OF STOCK") ? "out-of-stock" : 
-          lowStockNotification.includes("CRITICAL") ? "critical" : ""
-        }`}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <span role="img" aria-label="warning">
-              {lowStockNotification.includes("OUT OF STOCK") ? "🚨" : 
-               lowStockNotification.includes("CRITICAL") ? "⚠️" : "ℹ️"}
-            </span> 
-            <span>
-              {lowStockNotification}
-            </span>
-          </div>
-          
-          <div className="alert-actions">
-            <button 
-              className="alert-action-btn"
-              onClick={() => {
-                const bookTitle = lowStockNotification.match(/"([^"]+)"/)?.[1];
-                const targetBook = books.find(book => book.title === bookTitle);
-                if (targetBook) {
-                  openRestockModal(targetBook);
-                }
-              }}
-              title="Restock this item"
-            >
-              Restock Now
-            </button>
-            <button 
-              className="dismiss-btn"
-              onClick={() => setLowStockNotification("")}
-              title="Dismiss alert"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="alerts-container">
-        {/* Header with Stats */}
-        <header className="alerts-header">
-          <h1>Inventory Alert Management</h1>
-          <p>Monitor stock levels, manage inventory alerts, and track restocking activities</p>
-          
-          <div className="stats-container">
-            <div className="stat-card critical">
-              <div className="stat-number">{getOutOfStockCount()}</div>
-              <div className="stat-label">Out of Stock</div>
-            </div>
-            <div className="stat-card critical">
-              <div className="stat-number">{getCriticalCount()}</div>
-              <div className="stat-label">Critical Level</div>
-            </div>
-            <div className="stat-card warning">
-              <div className="stat-number">{getLowStockCount()}</div>
-              <div className="stat-label">Low Stock</div>
-            </div>
-            <div className="stat-card info">
-              <div className="stat-number">{books.length}</div>
-              <div className="stat-label">Total Items</div>
-            </div>
-            <div className="stat-card success">
-              <div className="stat-number">${getTotalValue()}</div>
-              <div className="stat-label">Total Value</div>
-            </div>
-            <div className="stat-card info">
-              <div className="stat-number">{getTotalStock()}</div>
-              <div className="stat-label">Units in Stock</div>
-            </div>
-          </div>
-        </header>
-
-        {/* Controls */}
-        <div className="controls-container">
-          <div className="search-controls">
-            <select
-              className="control-select"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-            >
-              <option value="title">Title</option>
-              <option value="author">Author</option>
-              <option value="category">Category</option>
-              <option value="stock">Stock</option>
-              <option value="status">Status</option>
-              <option value="supplier">Supplier</option>
-            </select>
-
-            <input
-              type="text"
-              className="search-input"
-              placeholder={`Search by ${searchField}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-
-            <select
-              className="control-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="out-of-stock">Out of Stock</option>
-              <option value="critical">Critical</option>
-              <option value="low">Low</option>
-              <option value="safe">Safe</option>
-            </select>
-
-            <button className="btn btn-outline" onClick={clearAllFilters}>
-              Clear Filters
-            </button>
-          </div>
-
-          <div className="action-controls">
-            <select
-              className="control-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="title">Sort by Title</option>
-              <option value="stock">Sort by Stock</option>
-              <option value="threshold">Sort by Threshold</option>
-              <option value="status">Sort by Status</option>
-              <option value="price">Sort by Price</option>
-              <option value="value">Sort by Value</option>
-              <option value="lastRestocked">Sort by Last Restocked</option>
-            </select>
-
-            <button
-              className="sort-order-btn"
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              title={`Sort ${sortOrder === "asc" ? "Descending" : "Ascending"}`}
-            >
-              {sortOrder === "asc" ? "↑" : "↓"}
-            </button>
-
-            <button className="btn btn-primary" onClick={openBulkRestockModal}>
-              Bulk Restock
-            </button>
-          </div>
-        </div>
-
-        {/* Results Count and Status */}
-        <div className="results-info">
-          Showing {processedBooks.length} of {books.length} books
-          {searchQuery && ` (filtered by "${searchQuery}")`}
-          {statusFilter !== "all" && ` (${statusFilter.replace("-", " ")} status)`}
-          {autoRefresh && <span className="auto-refresh-indicator">🔄 Auto-refresh: ON</span>}
-        </div>
-
-        {/* Table */}
-        <div className="table-wrapper">
-          <table className="alerts-table">
-            <thead>
-              <tr>
-                <th>Book Details</th>
-                <th>Stock Level</th>
-                <th>Status</th>
-                {/* <th>Borrowed Copies</th> */}
-                <th>Value</th>
-                <th>Last Restocked</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {processedBooks.map((book) => {
-                const status = getStatus(book.stock, book.threshold);
-                const stockPercentage = book.threshold > 0 ? Math.min((book.stock / book.threshold) * 100, 100) : 0;
-                const daysSinceRestock = Math.floor((new Date() - new Date(book.lastRestocked)) / (1000 * 60 * 60 * 24));
+            
+            <div className={`alerts-list ${viewMode}`}>
+              {getFilteredAlerts().map((alert, index) => {
+                const badge = getAlertBadgeContent(alert.type);
+                const progressPercentage = getProgressPercentage(alert.item?.stock || 0, alert.item?.threshold || 10);
                 
                 return (
-                  <tr key={book.id} className={`row-${status}`}>
-                    <td className="book-details">
-                      <div className="book-title">{book.title}</div>
-                      <div className="book-author">by {book.author}</div>
-                      <div className="book-category">{book.category}</div>
-                    </td>
-                    <td className="stock-level">
-                      <div className="stock-numbers">
-                        <strong className={status === "out-of-stock" ? "text-danger" : ""}>
-                          {book.stock}
-                        </strong> / {book.threshold}
-                      </div>
-                      <div className="stock-bar">
-                        <div 
-                          className={`stock-fill stock-fill-${status}`}
-                          style={{ width: `${stockPercentage}%` }}
-                        ></div>
-                      </div>
-                      <div className="stock-percentage">
-                        {stockPercentage.toFixed(0)}%
-                      </div>
-                    </td>
-                    <td className="status-cell">
-                      <span className={`status-badge status-${status}`}>
-                        {status.replace("-", " ").toUpperCase()}
-                        {status === "out-of-stock" && " ⚠️"}
-                      </span>
-                    </td>
-                    {/* <td className="borrowed-copies"> ...removed... </td> */}
-                    <td className="value-cell">
-                      <div className="total-value">${(book.stock * book.price).toFixed(2)}</div>
-                      <div className="unit-price">${book.price} each</div>
-                    </td>
-                    <td className="restock-info">
-                      <div className="restock-date">
-                        {new Date(book.lastRestocked).toLocaleDateString()}
-                      </div>
-                      {book.supplier && (
-                        <div className="supplier-name">{book.supplier}</div>
-                      )}
-                      <div className="days-ago">
-                        {daysSinceRestock} days ago
-                      </div>
-                    </td>
-                    <td className="actions-cell">
-                      <div className="action-buttons">
-                        {status !== "safe" && (
-                          <button
-                            className="btn btn-sm btn-primary"
-                            onClick={() => openRestockModal(book)}
-                            title="Restock this item"
+                  <div 
+                    key={alert.id} 
+                    className={`alert-item enhanced ${getAlertStyle(alert.type)} ${viewMode}`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="alert-priority-bar" style={{ backgroundColor: badge.color }}></div>
+                    
+                    <div className="alert-main-content">
+                      <div className="alert-header">
+                        <div className="alert-icon-wrapper">
+                          <div className="alert-icon">
+                            {getAlertIcon(alert.type)}
+                          </div>
+                          <span className="alert-badge" style={{ backgroundColor: badge.color }}>
+                            {badge.text}
+                          </span>
+                        </div>
+                        <div className="alert-meta">
+                          <span className="alert-time">
+                            <FaCalendarAlt className="meta-icon" />
+                            {new Date(alert.timestamp).toLocaleTimeString()}
+                          </span>
+                          <button 
+                            className="detail-btn"
+                            onClick={() => handleAlertClick(alert)}
+                            title="View Details"
                           >
-                            <span className="btn-icon">⚡</span>
-                            <span className="btn-text">Restock</span>
+                            <FaEye />
                           </button>
-                        )}
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          onClick={() => openEditModal(book)}
-                          title="Edit book details"
-                        >
-                          <span className="btn-icon">✏️</span>
-                          <span className="btn-text">Edit</span>
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => deleteBook(book.id)}
-                          title="Delete this book"
-                        >
-                          <span className="btn-icon">🗑️</span>
-                          <span className="btn-text">Delete</span>
-                        </button>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
+
+                      <div className="alert-body">
+                        <div className="alert-info">
+                          <h4 className="item-name">{alert.item?.name || alert.item?.title || 'Unknown Item'}</h4>
+                          <p className="alert-message">{alert.message}</p>
+                          
+                          <div className="stock-info">
+                            <div className="stock-details">
+                              <span className="stock-current">
+                                Current: <strong>{alert.item?.stock || 0}</strong>
+                              </span>
+                              <span className="stock-threshold">
+                                Threshold: <strong>{alert.item?.threshold || 10}</strong>
+                              </span>
+                              <span className="stock-status">
+                                {getStockLevelText(alert.item?.stock || 0, alert.item?.threshold || 10)}
+                              </span>
+                            </div>
+                            
+                            <div className="progress-container">
+                              <div className="progress-track">
+                                <div 
+                                  className={`progress-fill ${alert.type}`} 
+                                  style={{ width: `${progressPercentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="progress-text">{Math.round(progressPercentage)}%</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="alert-actions enhanced">
+                          <button 
+                            className="action-btn restock-btn"
+                            onClick={() => setSidebarActive && setSidebarActive('products')}
+                            title="Go to Products"
+                          >
+                            <FaShoppingCart className="btn-icon" />
+                            Restock
+                          </button>
+                          <button 
+                            className="action-btn dismiss-btn"
+                            onClick={() => dismissAlert(alert.id)}
+                            title="Dismiss Alert"
+                          >
+                            <FaTimes className="btn-icon" />
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button 
+                      className="close-btn enhanced"
+                      onClick={() => dismissAlert(alert.id)}
+                      title="Dismiss"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-
-        {processedBooks.length === 0 && (
-          <div className="no-results">
-            <div className="no-results-icon">📚</div>
-            <div className="no-results-text">
-              No books found matching your criteria.
             </div>
-            <button className="btn btn-outline" onClick={clearAllFilters}>
-              Clear all filters
-            </button>
-          </div>
+          </>
         )}
       </div>
 
-      {/* Restock Modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h2>Restock "{selectedBook?.title}"</h2>
-              <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+      {/* Enhanced Notification */}
+      {notification && (
+        <div className="notification enhanced success">
+          <div className="notification-content">
+            <div className="notification-icon">
+              <FaBell />
             </div>
-            <form onSubmit={handleRestockSubmit}>
-              <div className="form-group">
-                <label>Current Stock:</label>
-                <div className="current-stock-display">
-                  {selectedBook?.stock} units
-                  <span className={`status-badge status-${getStatus(selectedBook?.stock, selectedBook?.threshold)}`}>
-                    {getStatus(selectedBook?.stock, selectedBook?.threshold).replace("-", " ").toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Restock Amount:</label>
-                <input
-                  type="number"
-                  value={restockAmount}
-                  min="1"
-                  max="1000"
-                  onChange={(e) => setRestockAmount(e.target.value)}
-                  required
-                />
-                <small>New total will be: {selectedBook?.stock + parseInt(restockAmount || 0)} units</small>
-              </div>
-
-              <div className="form-group">
-                <label>Supplier:</label>
-                <input
-                  type="text"
-                  value={supplier}
-                  onChange={(e) => setSupplier(e.target.value)}
-                  placeholder="Supplier name"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Estimated Cost:</label>
-                <div className="cost-display">
-                  ${((restockAmount || 0) * (selectedBook?.price || 0)).toFixed(2)}
-                </div>
-              </div>
-
-              <div className="modal-buttons">
-                <button type="submit" className="btn btn-success">Confirm Restock</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+            <span className="notification-text">{notification}</span>
           </div>
+          <button 
+            className="notification-close"
+            onClick={() => setNotification("")}
+          >
+            <FaTimes />
+          </button>
         </div>
       )}
 
-      {/* Bulk Restock Modal */}
-      {showBulkModal && (
-        <div className="modal-overlay">
-          <div className="modal">
+      {/* Alert Detail Modal */}
+      {showDetailModal && selectedAlert && (
+        <div className="modal-overlay enhanced">
+          <div className="modal enhanced">
             <div className="modal-header">
-              <h2>Bulk Restock Low Stock Items</h2>
-              <button className="close-btn" onClick={() => setShowBulkModal(false)}>×</button>
+              <h3>
+                <FaEye className="modal-icon" />
+                Alert Details
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowDetailModal(false)}
+              >
+                <FaTimes />
+              </button>
             </div>
-            <form onSubmit={handleBulkRestock}>
-              <div className="bulk-info">
-                <p>This will restock all items that are not in "Safe" status.</p>
-                <p><strong>Items to be restocked:</strong> {books.filter(book => getStatus(book.stock, book.threshold) !== "safe").length}</p>
-                <div className="bulk-preview">
-                  {books.filter(book => getStatus(book.stock, book.threshold) !== "safe").slice(0, 5).map(book => (
-                    <div key={book.id} className="bulk-item">
-                      • {book.title} (Current: {book.stock})
-                    </div>
-                  ))}
-                  {books.filter(book => getStatus(book.stock, book.threshold) !== "safe").length > 5 && (
-                    <div className="bulk-item">
-                      ... and {books.filter(book => getStatus(book.stock, book.threshold) !== "safe").length - 5} more
-                    </div>
-                  )}
+            <div className="modal-content">
+              <div className="detail-grid">
+                <div className="detail-section">
+                  <h4>Item Information</h4>
+                  <div className="detail-item">
+                    <label>Name:</label>
+                    <span>{selectedAlert.item?.name || selectedAlert.item?.title}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Current Stock:</label>
+                    <span className="stock-value">{selectedAlert.item?.stock || 0} units</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Threshold:</label>
+                    <span>{selectedAlert.item?.threshold || 10} units</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Status:</label>
+                    <span className={`status-badge ${selectedAlert.type}`}>
+                      {getStockLevelText(selectedAlert.item?.stock || 0, selectedAlert.item?.threshold || 10)}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="detail-section">
+                  <h4>Alert Information</h4>
+                  <div className="detail-item">
+                    <label>Priority:</label>
+                    <span className={`priority-badge ${selectedAlert.type}`}>
+                      {getAlertBadgeContent(selectedAlert.type).text}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Generated:</label>
+                    <span>{new Date(selectedAlert.timestamp).toLocaleString()}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Message:</label>
+                    <span className="alert-message-detail">{selectedAlert.message}</span>
+                  </div>
                 </div>
               </div>
-
-              <div className="form-group">
-                <label>Restock Amount (per book):</label>
-                <input
-                  type="number"
-                  value={bulkRestockAmount}
-                  min="1"
-                  max="100"
-                  onChange={(e) => setBulkRestockAmount(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Supplier:</label>
-                <input
-                  type="text"
-                  value={bulkSupplier}
-                  onChange={(e) => setBulkSupplier(e.target.value)}
-                  placeholder="Supplier name for all items"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Estimated Total Cost:</label>
-                <div className="cost-display">
-                  ${books.filter(book => getStatus(book.stock, book.threshold) !== "safe")
-                    .reduce((total, book) => total + (book.price * (bulkRestockAmount || 0)), 0).toFixed(2)}
-                </div>
-              </div>
-
-              <div className="modal-buttons">
-                <button type="submit" className="btn btn-success">Confirm Bulk Restock</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowBulkModal(false)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Book Modal */}
-      {showEditModal && (
-        <div className="modal-overlay">
-          <div className="modal modal-large">
-            <div className="modal-header">
-              <h2>Edit Book</h2>
-              <button className="close-btn" onClick={() => setShowEditModal(false)}>×</button>
             </div>
-            <form onSubmit={handleEditBook}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Title: *</label>
-                  <input
-                    type="text"
-                    value={editBook.title || ""}
-                    onChange={(e) => setEditBook({...editBook, title: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Author: *</label>
-                  <input
-                    type="text"
-                    value={editBook.author || ""}
-                    onChange={(e) => setEditBook({...editBook, author: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Category: *</label>
-                  <input
-                    type="text"
-                    value={editBook.category || ""}
-                    onChange={(e) => setEditBook({...editBook, category: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Current Stock:</label>
-                  <input
-                    type="number"
-                    value={editBook.stock || 0}
-                    onChange={(e) => setEditBook({...editBook, stock: e.target.value})}
-                    min="0"
-                    max="9999"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Threshold:</label>
-                  <input
-                    type="number"
-                    value={editBook.threshold || 10}
-                    onChange={(e) => setEditBook({...editBook, threshold: e.target.value})}
-                    min="1"
-                    max="999"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Price ($):</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editBook.price || 0}
-                    onChange={(e) => setEditBook({...editBook, price: e.target.value})}
-                    min="0"
-                    max="9999.99"
-                    required
-                  />
-                </div>
-                <div className="form-group form-group-full">
-                  <label>Supplier:</label>
-                  <input
-                    type="text"
-                    value={editBook.supplier || ""}
-                    onChange={(e) => setEditBook({...editBook, supplier: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-preview">
-                <h4>Current Status:</h4>
-                <p><strong>Status:</strong> 
-                  <span className={`status-badge status-${getStatus(parseInt(editBook.stock || 0), parseInt(editBook.threshold || 10))}`}>
-                    {getStatus(parseInt(editBook.stock || 0), parseInt(editBook.threshold || 10)).replace("-", " ").toUpperCase()}
-                  </span>
-                </p>
-                <p><strong>Total Value:</strong> ${((editBook.stock || 0) * (editBook.price || 0)).toFixed(2)}</p>
-              </div>
-
-              <div className="modal-buttons">
-                <button type="submit" className="btn btn-success">Update Book</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Fine Modal */}
-      {showFineModal && selectedBorrower && (
-        <div className="modal-overlay">
-          <div className="fine-modal">
-            <div className="modal-header">
-              <h2>Late Return Fine</h2>
-              <button className="close-btn" onClick={() => setShowFineModal(false)}>×</button>
-            </div>
-            <div className="fine-modal-content">
-              <p>Borrower: {selectedBorrower.borrowerName}</p>
-              <p>Fine Amount: ${fineAmount}</p>
-              <div className="modal-buttons">
-                <button className="btn btn-danger" onClick={handleFinePayment}>
-                  Collect Fine & Return Book
-                </button>
-                <button className="btn btn-secondary" onClick={() => setShowFineModal(false)}>Cancel</button>
-              </div>
+            <div className="modal-actions">
+              <button 
+                className="action-btn primary"
+                onClick={() => {
+                  setSidebarActive && setSidebarActive('products');
+                  setShowDetailModal(false);
+                }}
+              >
+                <FaShoppingCart className="btn-icon" />
+                Go to Products
+              </button>
+              <button 
+                className="action-btn secondary"
+                onClick={() => setShowDetailModal(false)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

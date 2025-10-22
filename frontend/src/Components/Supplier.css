@@ -168,12 +168,11 @@
 .supplier-container {
   max-width: 1200px;
   margin: 0 auto;
-  margin-left: 180px; /* Match sidebar width */
   padding: 20px;
   background-color: #ffffff;
   font-family: Arial, sans-serif;
   color: #333333;
-  width: calc(100% - 180px);
+  width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
 }
@@ -255,6 +254,20 @@
 .action-buttons {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.info-message {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fbbf24;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .filter-button,

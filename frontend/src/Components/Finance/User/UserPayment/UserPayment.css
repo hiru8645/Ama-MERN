@@ -1,0 +1,108 @@
+/* Full-page background */
+.payment-page {
+  min-height: 100vh;
+  width: 100%;
+  background-image: url("../../../../assets/images/bg.jpg"); 
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Payment form container */
+.payment-container {
+  max-width: 450px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95); /* more solid background */
+  padding: 30px 25px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  color: #333;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.payment-container:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.payment-container h2 {
+  text-align: center;
+  color: #0d6efd;
+  margin-bottom: 25px;
+  font-size: 26px;
+}
+
+/* Form styling */
+.payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.payment-form label {
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.payment-form input {
+  padding: 12px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border 0.3s, box-shadow 0.3s;
+}
+
+.payment-form input:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 6px rgba(13, 110, 253, 0.3);
+}
+
+/* Submit button */
+.payment-form button {
+  background: #0d6efd;
+  color: white;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.payment-form button:hover {
+  background: #004bb5;
+  transform: translateY(-2px);
+}
+
+/* Message styling */
+.message {
+  margin-top: 18px;
+  text-align: center;
+  font-weight: bold;
+  color: green;
+  font-size: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+  .payment-container {
+    padding: 20px 15px;
+  }
+
+  .payment-form input {
+    font-size: 14px;
+    padding: 10px 8px;
+  }
+
+  .payment-form button {
+    font-size: 15px;
+    padding: 12px;
+  }
+}

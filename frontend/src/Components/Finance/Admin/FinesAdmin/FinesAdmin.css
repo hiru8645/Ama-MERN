@@ -1,0 +1,261 @@
+.fines-page {
+  min-height: 100vh;
+  width: 100%;
+  background-image: url("../../../../assets/images/bg.jpg");
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px 40px 20px;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Page header */
+.fines-page h2 {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 40px;
+  color: #0d6efd;
+  text-align: center;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+}
+
+/* Fines container */
+.fines-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* Fine card */
+.fine-card {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 25px 30px;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+  width: 280px;
+  text-align: center;
+  animation: fadeIn 0.8s ease-in-out;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.fine-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+}
+
+/* Fine header */
+.fine-card h3 {
+  font-size: 24px;
+  font-weight: bold;
+  color: #dc3545;
+  margin-bottom: 15px;
+}
+
+/* Fine details */
+.fine-card p {
+  font-size: 16px;
+  color: #333;
+  margin: 6px 0;
+}
+
+.fine-card p strong {
+  color: #0d6efd;
+}
+
+/* Footer */
+.fine-footer {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #555;
+}
+
+/* Actions */
+.fine-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.fine-actions button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #fff;
+  transition: opacity 0.2s ease;
+}
+
+/* Button colors */
+.approve-btn {
+  background-color: #28a745;
+}
+
+.reject-btn {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.delete-btn {
+  background-color: #dc3545;
+}
+
+.fine-actions button:hover {
+  opacity: 0.9;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+/* Overdue Books Notification Styles */
+.overdue-notification {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border: 2px solid #c44569;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  width: 100%;
+  max-width: 1000px;
+  color: white;
+  box-shadow: 0 8px 25px rgba(196, 69, 105, 0.4);
+  animation: pulseAlert 2s infinite ease-in-out;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.notification-header h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.toggle-details {
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.4);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.toggle-details:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.05);
+}
+
+.overdue-details {
+  margin-top: 15px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.alert-message {
+  font-size: 16px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.overdue-books-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.overdue-book-item {
+  background: rgba(255,255,255,0.15);
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #ffeaa7;
+}
+
+.book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.book-title {
+  font-weight: bold;
+  font-size: 16px;
+  color: #ffeaa7;
+}
+
+.borrower, .due-date, .days-overdue {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.days-overdue {
+  color: #ffeaa7;
+  font-weight: bold;
+}
+
+.fine-action {
+  text-align: right;
+}
+
+.suggested-fine {
+  background: rgba(255,255,255,0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  color: #ffeaa7;
+}
+
+@keyframes pulseAlert {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .notification-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .overdue-book-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .fines-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .fine-card {
+    width: 90%;
+    padding: 20px 22px;
+  }
+}

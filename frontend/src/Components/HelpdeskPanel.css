@@ -1,0 +1,278 @@
+.helpdesk-panel {
+  padding: 0;
+  background: transparent;
+}
+
+.helpdesk-panel .panel-header {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.helpdesk-panel .header-info h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.helpdesk-panel .header-info p {
+  margin: 0;
+  opacity: 0.95;
+}
+
+/* Role Selector Styling */
+.role-selector {
+  padding: 1rem;
+  margin: 1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.role-selector h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.3s;
+}
+
+.role-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.role-btn.active {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  border-color: #9b59b6;
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.4);
+}
+
+/* Stats Grid */
+.helpdesk-panel .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.helpdesk-panel .stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  gap: 1rem;
+  transition: transform 0.2s;
+}
+
+.helpdesk-panel .stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.helpdesk-panel .stat-card .stat-icon {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.helpdesk-panel .stat-card.total-tickets .stat-icon {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: white;
+}
+
+.helpdesk-panel .stat-card.open-tickets .stat-icon {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  color: white;
+}
+
+.helpdesk-panel .stat-card.resolved-tickets .stat-icon {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+}
+
+.helpdesk-panel .stat-card.response-time .stat-icon {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+}
+
+.helpdesk-panel .stat-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+  color: #2c3e50;
+}
+
+.helpdesk-panel .stat-info p {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.helpdesk-panel .stat-change {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.helpdesk-panel .stat-change.positive {
+  background: #d4edda;
+  color: #27ae60;
+}
+
+.helpdesk-panel .stat-change.warning {
+  background: #fff3cd;
+  color: #f39c12;
+}
+
+/* Quick Actions */
+.helpdesk-panel .quick-actions {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.helpdesk-panel .quick-actions h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+}
+
+.helpdesk-panel .action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.helpdesk-panel .action-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: none;
+  border-radius: 10px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #2c3e50;
+}
+
+.helpdesk-panel .action-card:hover {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: white;
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+}
+
+.helpdesk-panel .action-card svg,
+.helpdesk-panel .action-card span:first-child {
+  font-size: 2rem;
+}
+
+/* Recent Activity */
+.helpdesk-panel .recent-activity {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.helpdesk-panel .recent-activity h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+}
+
+.helpdesk-panel .activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.helpdesk-panel .activity-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.helpdesk-panel .activity-item:hover {
+  background: #e9ecef;
+}
+
+.helpdesk-panel .activity-icon {
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.helpdesk-panel .activity-content p {
+  margin: 0 0 0.25rem 0;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.helpdesk-panel .activity-content small {
+  color: #7f8c8d;
+  font-size: 0.85rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .helpdesk-panel .panel-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .helpdesk-panel .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .helpdesk-panel .action-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

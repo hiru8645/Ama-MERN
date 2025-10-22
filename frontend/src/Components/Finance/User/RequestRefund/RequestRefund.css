@@ -1,0 +1,118 @@
+/* Full-page background (same as payment page) */
+.refund-page {
+  min-height: 100vh;
+  width: 100%;
+  background-image: url("../../../../assets/images/bg.jpg"); /* adjust path if needed */
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Refund form container */
+.refund-form-container {
+  max-width: 450px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95); /* solid glassy effect */
+  padding: 30px 25px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  color: #333;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.refund-form-container:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.refund-form-container h2 {
+  text-align: center;
+  color: #0d6efd;
+  margin-bottom: 25px;
+  font-size: 26px;
+}
+
+/* Form styling */
+.refund-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.refund-form label {
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.refund-form input,
+.refund-form textarea {
+  padding: 10px 9px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border 0.3s, box-shadow 0.3s;
+  background: #fff;
+}
+
+.refund-form input:focus,
+.refund-form textarea:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 6px rgba(13, 110, 253, 0.3);
+}
+
+/* Textarea */
+.refund-form textarea {
+  resize: none;
+  min-height: 90px;
+}
+
+/* Submit button */
+.refund-form button {
+  background: #0d6efd;
+  color: white;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.refund-form button:hover {
+  background: #004bb5;
+  transform: translateY(-2px);
+}
+
+/* Message styling */
+.message {
+  margin-top: 18px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 15px;
+  color: green;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+  .refund-form-container {
+    padding: 20px 15px;
+  }
+
+  .refund-form input,
+  .refund-form textarea {
+    font-size: 13px;
+    padding: 8px 7px;
+  }
+
+  .refund-form button {
+    font-size: 15px;
+    padding: 12px;
+  }
+}
